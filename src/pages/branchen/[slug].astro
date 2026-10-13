@@ -20,9 +20,9 @@ const { industry } = Astro.props;
 <Base title={industry.seo.title} description={industry.seo.description}>
   <IndustryHero industry={industry} />
   <CustomerRequests industry={industry} />
-  <AutopilotFlows industry={industry} />
   <EconomicExample industry={industry} />
   <RoiCalculator industrySlug={industry.slug} />
+  <AutopilotFlows industry={industry} />
   <FeatureGrid id="funktionen" light industryName={industry.name} examples={industry.featureExamples} />
   <ReportingSection
     items={industry.reporting.items}
@@ -30,6 +30,6 @@ const { industry } = Astro.props;
     timeSaved={industry.reporting.timeSaved}
     lead={`So kann ein Tagesbericht für ${industry.audience} aussehen. Sie sehen jeden Tag, was BusinessPilot übernommen hat.`}
   />
-  <PlanRecommendation industry={industry} />
+  <PlanRecommendation industry={industry} light />
   <IndustryCta industry={industry} />
 </Base>

@@ -2,15 +2,15 @@
 import Icon from './Icon.astro';
 import { getPlan } from '../data/plans';
 import type { Industry } from '../data/industries';
-interface Props { industry: Industry }
-const { industry } = Astro.props;
+interface Props { industry: Industry; light?: boolean }
+const { industry, light = false } = Astro.props;
 const rec = industry.recommendedPlan;
 const cols = [
   { plan: getPlan('BUSINESS'), points: rec.business },
   { plan: getPlan('AUTOPILOT'), points: rec.autopilot },
 ];
 ---
-<section class="section" aria-labelledby="plan-title">
+<section class:list={['section', { 'section--light': light }]} aria-labelledby="plan-title">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Paketempfehlung</span>
