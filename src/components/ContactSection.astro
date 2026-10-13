@@ -1,0 +1,27 @@
+---
+import Icon from './Icon.astro';
+import ContactForm from './ContactForm.astro';
+interface Props { preselect?: string }
+const { preselect } = Astro.props;
+---
+<section id="kontakt" class="section section--dark" aria-labelledby="kontakt-title">
+  <div class="container contact">
+    <div>
+      <span class="eyebrow">Demo & Test</span>
+      <h2 id="kontakt-title" class="h2">Lerne deinen digitalen Mitarbeiter kennen.</h2>
+      <p class="lead">Erzähl uns kurz, welche Anfragen bei dir täglich ankommen. Wir zeigen dir in einer Demo, wie BusinessPilot sie übernimmt.</p>
+      <ul class="contact__points">
+        <li><span class="icon-tile"><Icon name="clock" /></span> Persönliche Demo mit Beispielen aus deiner Branche</li>
+        <li><span class="icon-tile"><Icon name="shield" /></span> Unverbindlich und ohne Technikwissen</li>
+        <li><span class="icon-tile"><Icon name="employee" /></span> Du bestimmst, was BusinessPilot selbst erledigt</li>
+      </ul>
+    </div>
+    <ContactForm preselect={preselect} />
+  </div>
+</section>
+<style>
+  .contact { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+  .contact__points { list-style: none; display: grid; gap: 14px; margin-top: 28px; font-weight: 600; }
+  .contact__points li { display: flex; align-items: center; gap: 12px; }
+  @media (max-width: 960px) { .contact { grid-template-columns: minmax(0, 1fr); } }
+</style>

@@ -1,0 +1,85 @@
+---
+import Icon from './Icon.astro';
+interface Props {
+  items: { value: string; label: string }[];
+  revenue: string;
+  timeSaved: string;
+  light?: boolean;
+  lead?: string;
+}
+const {
+  items, revenue, timeSaved, light = false,
+  lead = 'Jeden Tag siehst du, was BusinessPilot übernommen hat und welchen Wert das für dein Unternehmen hat.',
+} = Astro.props;
+const icons = ['phone', 'whatsapp', 'calendar', 'reactivate', 'trend', 'quote', 'users', 'star'];
+---
+<section id="reporting" class:list={['section', { 'section--light': light }]} aria-labelledby="reporting-title">
+  <div class="container reporting">
+    <div class="reporting__intro">
+      <span class="eyebrow">Reporting</span>
+      <h2 id="reporting-title" class="h2">Was hat mein digitaler Mitarbeiter heute gemacht?</h2>
+      <p class="lead">{lead}</p>
+      <ul class="reporting__points">
+        <li><Icon name="check" size={18} /> Anrufe, Nachrichten, Termine und Leads auf einen Blick</li>
+        <li><Icon name="check" size={18} /> Geschätzte Zeitersparnis und zusätzlicher Umsatz</li>
+        <li><Icon name="check" size={18} /> Verständlich, ohne Technik-Kennzahlen</li>
+      </ul>
+    </div>
+    <div class="dashboard card" role="group" aria-label="Beispiel-Dashboard mit Demo-Werten">
+      <div class="dashboard__top">
+        <div>
+          <strong>Heute, 18:00 Uhr</strong>
+          <span>Tagesbericht deines digitalen Mitarbeiters</span>
+        </div>
+        <span class="example-label">Demo / Beispielwerte</span>
+      </div>
+      <ul class="dashboard__grid" role="list">
+        {items.map((item, i) => (
+          <li>
+            <span class="icon-tile"><Icon name={icons[i % icons.length]} /></span>
+            <span class="dashboard__value">{item.value}</span>
+            <span class="dashboard__label">{item.label}</span>
+          </li>
+        ))}
+      </ul>
+      <div class="dashboard__highlights">
+        <div class="dashboard__hl dashboard__hl--green">
+          <span>Geschätzter zusätzlicher Umsatz</span>
+          <strong>{revenue}</strong>
+        </div>
+        <div class="dashboard__hl">
+          <span>Arbeitszeit eingespart</span>
+          <strong>{timeSaved}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+  .reporting { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
+  .reporting__points { list-style: none; display: grid; gap: 10px; margin-top: 24px; font-weight: 600; }
+  .reporting__points li { display: flex; gap: 10px; }
+  .reporting__points :global(svg) { color: var(--green-700); flex: none; margin-top: 3px; }
+  .dashboard { padding: 24px; }
+  .dashboard__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .dashboard__top strong { display: block; }
+  .dashboard__top span:not(.example-label) { font-size: .875rem; color: var(--text-muted); }
+  .dashboard__grid { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .dashboard__grid li { border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px; display: grid; gap: 4px; align-content: start; }
+  .dashboard__grid .icon-tile { width: 34px; height: 34px; border-radius: 10px; margin-bottom: 6px; }
+  .dashboard__grid .icon-tile :global(svg) { width: 17px; height: 17px; }
+  .dashboard__value { font-size: 1.625rem; font-weight: 800; line-height: 1; }
+  .dashboard__label { font-size: .8125rem; color: var(--text-muted); line-height: 1.35; }
+  .dashboard__highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .dashboard__hl { border-radius: var(--radius); padding: 16px; background: var(--navy-900); color: var(--white); display: grid; gap: 4px; }
+  .dashboard__hl span { font-size: .8125rem; color: var(--text-on-dark-muted); }
+  .dashboard__hl strong { font-size: 1.625rem; font-weight: 800; }
+  .dashboard__hl--green { background: var(--green-500); color: var(--navy-900); }
+  .dashboard__hl--green span { color: var(--navy-800); }
+  @media (max-width: 1024px) { .reporting { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) {
+    .dashboard { padding: 16px; }
+    .dashboard__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard__highlights { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>

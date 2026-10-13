@@ -1,0 +1,51 @@
+---
+import Icon from './Icon.astro';
+import { getPlan } from '../data/plans';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+const rec = industry.recommendedPlan;
+const cols = [
+  { plan: getPlan('BUSINESS'), points: rec.business },
+  { plan: getPlan('AUTOPILOT'), points: rec.autopilot },
+];
+---
+<section class="section" aria-labelledby="plan-title">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Paketempfehlung</span>
+      <h2 id="plan-title" class="h2">Das passende Paket für {industry.audience}</h2>
+      <p class="lead">Unsere Empfehlung für typische Betriebe. Alle Pakete und Details finden Sie in der <a href="/#preise" class="link-arrow">Preisübersicht</a>.</p>
+    </div>
+    <div class="grid grid--2">
+      {cols.map(({ plan, points }) => {
+        const isRec = plan.id === rec.recommended;
+        return (
+          <article class:list={['prec card', { 'prec--rec': isRec }]}>
+            <div class="prec__head">
+              <span class="plan-tag">{plan.name}</span>
+              {isRec && <span class="prec__flag">Empfohlen für {industry.audience}</span>}
+            </div>
+            <h3 class="prec__pos">{plan.positioning}</h3>
+            <p class="prec__price"><strong>{plan.priceMonthly}</strong> / Monat · {plan.onboarding}</p>
+            <ul>
+              {points.map((p) => <li><Icon name="check" size={18} /> {p}</li>)}
+            </ul>
+          </article>
+        );
+      })}
+    </div>
+  </div>
+</section>
+<style>
+  .prec { padding: 28px; display: flex; flex-direction: column; gap: 12px; }
+  .prec--rec { border-color: var(--green-500); box-shadow: 0 0 0 1px var(--green-500), var(--shadow); }
+  .prec__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .prec__flag { background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-100); padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 800; }
+  .prec__pos { font-size: 1.375rem; }
+  .prec__price { color: var(--text-muted); font-size: .9375rem; }
+  .prec__price strong { color: var(--text); font-size: 1.125rem; }
+  .prec ul { list-style: none; display: grid; gap: 10px; margin-top: 6px; }
+  .prec li { display: flex; gap: 10px; font-weight: 600; }
+  .prec li :global(svg) { flex: none; color: var(--green-600); margin-top: 3px; }
+</style>

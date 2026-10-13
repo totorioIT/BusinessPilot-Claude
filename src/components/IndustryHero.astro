@@ -1,0 +1,97 @@
+---
+import Icon from './Icon.astro';
+import IndustryImage from './IndustryImage.astro';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+const channelIcon = { Anruf: 'phone', WhatsApp: 'whatsapp', 'Website-Chat': 'chat' }[industry.overlay.channel];
+const channelLabel = { Anruf: 'Eingehender Anruf', WhatsApp: 'Neue WhatsApp-Nachricht', 'Website-Chat': 'Neue Website-Anfrage' }[industry.overlay.channel];
+---
+<section class="ihero" aria-labelledby="ihero-title">
+  <div class="container ihero__grid">
+    <div class="ihero__content">
+      <nav aria-label="Brotkrümelnavigation" class="breadcrumb">
+        <ol>
+          <li><a href="/">Start</a></li>
+          <li><a href="/#branchen">Branchen</a></li>
+          <li aria-current="page">{industry.name}</li>
+        </ol>
+      </nav>
+      <span class="badge badge--solid"><Icon name={industry.icon} size={16} /> BusinessPilot für {industry.name}</span>
+      <h1 id="ihero-title" class="ihero__title">{industry.heroTitle}</h1>
+      <p class="ihero__text">{industry.heroSubtitle}</p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="#kontakt">BusinessPilot testen <Icon name="arrowRight" size={18} /></a>
+        <a class="btn btn--outline-light" href="#anfragen">Beispiele ansehen</a>
+      </div>
+      {industry.autopilotPromise && (
+        <p class="ihero__extra"><span class="plan-tag">AUTOPILOT</span> {industry.autopilotPromise}</p>
+      )}
+    </div>
+    <div class="ihero__visual">
+      <IndustryImage
+        class="ihero__media"
+        src={industry.image.src}
+        alt={industry.image.alt}
+        icon={industry.icon}
+        label={industry.name}
+        eager
+        sizes="(max-width: 960px) 100vw, 560px"
+      />
+      <div class="overlay" role="group" aria-label={`Beispiel: ${channelLabel}`}>
+        <div class="overlay__call">
+          <span class="overlay__icon"><Icon name={channelIcon} size={18} /></span>
+          <div>
+            <span class="overlay__meta">{channelLabel}</span>
+            <strong>{industry.overlay.caller}</strong>
+          </div>
+        </div>
+        <p class="overlay__quote">„{industry.overlay.text}“</p>
+        <div class="overlay__status">
+          <span class="overlay__status-title">BusinessPilot</span>
+          <ul>
+            {industry.overlay.checks.map((c) => <li><Icon name="check" size={14} /> {c}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+  .ihero { background: var(--navy-900); color: var(--white); padding-block: clamp(40px, 6vw, 72px) clamp(56px, 8vw, 104px); overflow: hidden; }
+  .ihero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(40px, 6vw, 72px); align-items: center; }
+  .breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; font-size: .875rem; color: var(--text-on-dark-muted); margin-bottom: 22px; }
+  .breadcrumb li:not(:last-child)::after { content: '/'; margin-left: 6px; opacity: .6; }
+  .breadcrumb a { text-decoration: none; }
+  .breadcrumb a:hover { color: var(--white); }
+  .breadcrumb [aria-current] { color: var(--white); font-weight: 600; }
+  .ihero__title { font-size: clamp(2.25rem, 5.2vw, 4rem); margin: 20px 0 20px; letter-spacing: -0.03em; line-height: 1.05; }
+  .ihero__text { font-size: clamp(1.0625rem, 1.5vw, 1.25rem); color: var(--text-on-dark-muted); max-width: 560px; margin-bottom: 32px; }
+  .ihero__extra { margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--text-on-dark-muted); font-weight: 600; }
+  .ihero__visual { position: relative; padding-bottom: 40px; }
+  .ihero__visual :global(.ihero__media) { aspect-ratio: 5 / 4; border-radius: var(--radius-xl); }
+  .ihero__visual :global(.ihero__media .media__fallback) { padding-left: 38%; padding-bottom: 18%; }
+  .ihero__visual :global(.ihero__media .media__fallback svg) { width: 64px; height: 64px; }
+  .overlay {
+    position: absolute; left: -32px; bottom: 0; width: min(320px, 85%);
+    background: var(--white); color: var(--text); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-float); padding: 16px; display: grid; gap: 12px; z-index: 2;
+  }
+  .overlay__call { display: flex; gap: 10px; align-items: center; }
+  .overlay__icon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--green-500); color: var(--navy-900); }
+  .overlay__meta { display: block; font-size: .75rem; color: var(--text-muted); }
+  .overlay__quote { background: var(--green-50); border: 1px solid var(--green-100); border-radius: 12px; padding: 10px 12px; font-weight: 700; }
+  .overlay__status-title { font-size: .75rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+  .overlay__status ul { list-style: none; display: grid; gap: 6px; margin-top: 8px; }
+  .overlay__status li { display: flex; align-items: center; gap: 8px; font-size: .875rem; font-weight: 600; }
+  .overlay__status li :global(svg) { width: 20px; height: 20px; padding: 3px; border-radius: 50%; background: var(--green-500); color: var(--navy-900); flex: none; }
+  @media (max-width: 960px) {
+    .ihero__grid { grid-template-columns: minmax(0, 1fr); }
+    .overlay { left: 16px; }
+  }
+  @media (max-width: 520px) {
+    .ihero__visual :global(.ihero__media .media__fallback) { padding: 16px 16px 56px; }
+    .ihero__visual { padding-bottom: 0; }
+    .overlay { position: relative; left: auto; width: 100%; margin-top: -48px; margin-inline: auto; max-width: calc(100% - 24px); }
+  }
+</style>

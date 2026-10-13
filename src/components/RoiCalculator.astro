@@ -1,0 +1,214 @@
+---
+import Icon from './Icon.astro';
+import { industries } from '../data/industries';
+
+interface Props {
+  /** Fest gewählte Branche (Branchenseite). Ohne Angabe gibt es eine Branchenauswahl. */
+  industrySlug?: string;
+  light?: boolean;
+}
+const { industrySlug, light = false } = Astro.props;
+const fixed = industrySlug ? industries.find((i) => i.slug === industrySlug) : undefined;
+const initial = fixed ?? industries[0];
+const defaults = Object.fromEntries(industries.map((i) => [i.slug, { name: i.name, ...i.roiDefaults }]));
+
+const questions = [
+  { key: 'requests', label: 'Wie viele Kundenanfragen erhältst du pro Tag?', hint: 'Anrufe, WhatsApp, E-Mail und Website zusammen', min: 1, max: 100, step: 1, unit: '' },
+  { key: 'missed', label: 'Wie viele davon bleiben unbeantwortet oder werden zu spät beantwortet?', hint: 'Schätzung in Prozent', min: 0, max: 60, step: 1, unit: '%' },
+  { key: 'orderValue', label: 'Wie hoch ist dein durchschnittlicher Auftragswert?', hint: 'Termin, Auftrag oder Einkauf', min: 20, max: 3000, step: 5, unit: '€' },
+  { key: 'conversion', label: 'Wie viele Anfragen werden normalerweise zum Auftrag?', hint: 'Abschlussquote in Prozent', min: 5, max: 90, step: 1, unit: '%' },
+  { key: 'days', label: 'An wie vielen Tagen pro Woche hast du geöffnet?', hint: 'Arbeitstage', min: 1, max: 7, step: 1, unit: 'Tage' },
+] as const;
+---
+<section id="rechner" class:list={['section', { 'section--light': light }]} aria-labelledby="rechner-title">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">ROI-Rechner</span>
+      <h2 id="rechner-title" class="h2">Was kosten dich verpasste Anfragen wirklich?</h2>
+      <p class="lead">Beantworte 5 kurze Fragen und finde es heraus.</p>
+    </div>
+
+    <div class="roi" data-roi data-defaults={JSON.stringify(defaults)}>
+      <form class="roi__inputs card" onsubmit="return false" aria-label="Angaben zum Rechner">
+        <div class="roi__industry">
+          {fixed ? (
+            <p><span class="roi__industry-label">Branche:</span> <strong>{fixed.name}</strong></p>
+          ) : (
+            <label>
+              <span class="roi__industry-label">Branche:</span>
+              <select data-roi-industry>
+                {industries.map((i) => <option value={i.slug} selected={i.slug === initial.slug}>{i.name}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+        {questions.map((q, idx) => {
+          const value = initial.roiDefaults[q.key];
+          return (
+            <div class="roi__field">
+              <label for={`roi-${q.key}`} class="roi__label">
+                <span class="roi__num">{idx + 1}</span>
+                <span>{q.label}<small>{q.hint}</small></span>
+              </label>
+              <div class="roi__control">
+                <input
+                  id={`roi-${q.key}`}
+                  type="range"
+                  name={q.key}
+                  min={q.min}
+                  max={q.max}
+                  step={q.step}
+                  value={value}
+                  data-unit={q.unit}
+                />
+                <output for={`roi-${q.key}`} data-output={q.key}>{value} {q.unit}</output>
+              </div>
+            </div>
+          );
+        })}
+      </form>
+
+      <div class="roi__result" aria-live="polite">
+        <p class="roi__result-title">Potenzieller Umsatzverlust durch verpasste Anfragen</p>
+        <dl class="roi__values">
+          <div><dt>pro Tag</dt><dd data-result="day">–</dd></div>
+          <div class="roi__values-main"><dt>pro Monat</dt><dd data-result="month">–</dd></div>
+          <div><dt>pro Jahr</dt><dd data-result="year">–</dd></div>
+        </dl>
+        <div class="roi__score">
+          <div class="roi__score-head">
+            <span>BusinessPilot Score</span>
+            <strong><span data-result="score">–</span> / 100</strong>
+          </div>
+          <div class="roi__meter" role="presentation"><span data-result="meter"></span></div>
+          <p>Je höher der Score, desto mehr Anfragen kann BusinessPilot für dich auffangen.</p>
+        </div>
+        <p class="roi__note">Beispielrechnung auf Basis deiner Angaben. Keine Garantie für zukünftige Umsätze.</p>
+      </div>
+
+      <aside class="roi__value" aria-label="Was BusinessPilot übernimmt">
+        <h3>Das übernimmt BusinessPilot für dich</h3>
+        <ul>
+          <li><Icon name="check" size={18} /> Anrufe annehmen, auch wenn niemand Zeit hat</li>
+          <li><Icon name="check" size={18} /> WhatsApp und Website rund um die Uhr beantworten</li>
+          <li><Icon name="check" size={18} /> Termine direkt buchen und erinnern</li>
+          <li><Icon name="check" size={18} /> Offene Anfragen automatisch nachfassen</li>
+          <li><Icon name="check" size={18} /> Sichtbar machen, was erledigt wurde</li>
+        </ul>
+        <a class="btn btn--primary btn--block" href="/#kontakt">BusinessPilot testen <Icon name="arrowRight" size={18} /></a>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script>
+  const fmt = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  document.querySelectorAll<HTMLElement>('[data-roi]').forEach((root) => {
+    const defaults = JSON.parse(root.dataset.defaults || '{}');
+    const inputs = Array.from(root.querySelectorAll<HTMLInputElement>('input[type=range]'));
+    const get = (name: string) => Number(root.querySelector<HTMLInputElement>(`input[name=${name}]`)?.value || 0);
+    const set = (key: string, text: string) => {
+      const el = root.querySelector<HTMLElement>(`[data-result=${key}]`);
+      if (el) el.textContent = text;
+    };
+    const paintRange = (input: HTMLInputElement) => {
+      const pct = ((Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))) * 100;
+      input.style.setProperty('--fill', `${pct}%`);
+    };
+    const update = () => {
+      inputs.forEach((input) => {
+        const out = root.querySelector<HTMLElement>(`[data-output=${input.name}]`);
+        const unit = input.dataset.unit || '';
+        if (out) out.textContent = unit === '€' ? fmt.format(Number(input.value)) : `${input.value} ${unit}`.trim();
+        paintRange(input);
+      });
+      const perDay = get('requests') * (get('missed') / 100) * (get('conversion') / 100) * get('orderValue');
+      const perMonth = perDay * get('days') * (52 / 12);
+      set('day', fmt.format(perDay));
+      set('month', fmt.format(perMonth));
+      set('year', fmt.format(perMonth * 12));
+      const score = Math.round(Math.min(100, 20 + get('missed') * 1.2 + Math.min(get('requests'), 50) * 0.5));
+      set('score', String(score));
+      const meter = root.querySelector<HTMLElement>('[data-result=meter]');
+      if (meter) meter.style.width = `${score}%`;
+    };
+    inputs.forEach((input) => input.addEventListener('input', update));
+    root.querySelector<HTMLSelectElement>('[data-roi-industry]')?.addEventListener('change', (e) => {
+      const d = defaults[(e.target as HTMLSelectElement).value];
+      if (!d) return;
+      inputs.forEach((input) => { if (input.name in d) input.value = String(d[input.name]); });
+      update();
+    });
+    update();
+  });
+</script>
+
+<style>
+  .roi { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.9fr); gap: 20px; align-items: stretch; }
+  .roi__inputs { padding: 24px; display: grid; gap: 18px; }
+  .roi__industry { padding-bottom: 14px; border-bottom: 1px solid var(--gray-200); }
+  .roi__industry label, .roi__industry p { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .roi__industry-label { font-weight: 600; color: var(--text-muted); }
+  .roi__industry select {
+    padding: 8px 36px 8px 12px; border: 1px solid var(--gray-300); border-radius: 10px; background: var(--white);
+    font-weight: 700; appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%230b1b33' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
+  .roi__label { display: flex; gap: 10px; font-weight: 600; font-size: .9375rem; line-height: 1.4; }
+  .roi__label small { display: block; font-weight: 500; color: var(--text-muted); font-size: .8125rem; margin-top: 2px; }
+  .roi__num {
+    flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--green-50); color: var(--green-700); font-size: .75rem; font-weight: 800;
+  }
+  .roi__control { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-left: 34px; }
+  .roi__control output { min-width: 72px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+  input[type='range'] {
+    --fill: 50%;
+    flex: 1; height: 6px; border-radius: 999px; appearance: none; cursor: pointer;
+    background: linear-gradient(to right, var(--green-500) var(--fill), var(--gray-200) var(--fill));
+  }
+  input[type='range']::-webkit-slider-thumb {
+    appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--white); border: 3px solid var(--green-500); box-shadow: var(--shadow-sm);
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--white); border: 3px solid var(--green-500);
+  }
+
+  .roi__result {
+    background: var(--navy-900); color: var(--white); border-radius: var(--radius-lg); padding: 28px 24px;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+  .roi__result-title { font-weight: 700; color: var(--text-on-dark-muted); }
+  .roi__values { display: grid; gap: 14px; margin: 0; }
+  .roi__values div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--navy-line); padding-bottom: 12px; }
+  .roi__values dt { color: var(--text-on-dark-muted); font-size: .9375rem; }
+  .roi__values dd { margin: 0; font-weight: 800; font-size: 1.375rem; font-variant-numeric: tabular-nums; }
+  .roi__values-main dd { font-size: clamp(1.75rem, 3vw, 2.25rem); color: var(--green-500); }
+  .roi__score-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
+  .roi__score-head strong { font-size: 1.25rem; }
+  .roi__meter { height: 10px; border-radius: 999px; background: var(--navy-700); margin: 10px 0; overflow: hidden; }
+  .roi__meter span { display: block; height: 100%; background: var(--green-500); border-radius: inherit; transition: width .3s ease; }
+  .roi__score p { font-size: .8125rem; color: var(--text-on-dark-muted); }
+  .roi__note { margin-top: auto; font-size: .75rem; color: var(--text-on-dark-muted); }
+
+  .roi__value {
+    background: var(--green-50); border: 1px solid var(--green-100); border-radius: var(--radius-lg); padding: 28px 24px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .roi__value h3 { font-size: 1.25rem; }
+  .roi__value ul { list-style: none; display: grid; gap: 12px; flex: 1; align-content: start; }
+  .roi__value li { display: flex; gap: 10px; font-weight: 600; font-size: .9375rem; }
+  .roi__value li :global(svg) { flex: none; color: var(--green-700); margin-top: 2px; }
+
+  @media (max-width: 1100px) {
+    .roi { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .roi__inputs { grid-row: span 2; }
+  }
+  @media (max-width: 760px) {
+    .roi { grid-template-columns: minmax(0, 1fr); }
+    .roi__inputs { grid-row: auto; padding: 20px; }
+    .roi__control { padding-left: 0; }
+  }
+</style>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://businesspilot.de/sitemap-index.xml

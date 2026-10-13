@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import HomeHero from '../components/HomeHero.astro';
+import ProcessFlow from '../components/ProcessFlow.astro';
+import IndustrySelector from '../components/IndustrySelector.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import ReportingSection from '../components/ReportingSection.astro';
+import RoiCalculator from '../components/RoiCalculator.astro';
+import Pricing from '../components/Pricing.astro';
+import ContactSection from '../components/ContactSection.astro';
+
+const reporting = {
+  items: [
+    { value: '37', label: 'Telefonate angenommen' },
+    { value: '14', label: 'WhatsApp-Anfragen beantwortet' },
+    { value: '8', label: 'Termine gebucht' },
+    { value: '2', label: 'Termine verschoben' },
+    { value: '3', label: 'Leads generiert' },
+    { value: '2', label: 'Angebote vorbereitet' },
+    { value: '7', label: 'Kunden reaktiviert' },
+    { value: '5', label: 'Bewertungen angefragt' },
+  ],
+  revenue: '2.840 €',
+  timeSaved: '4 h 18 min',
+};
+---
+<Base
+  title="BusinessPilot – Dein digitaler Mitarbeiter für Kundenanfragen"
+  description="BusinessPilot nimmt Anrufe, WhatsApp- und Website-Anfragen an, bucht Termine, fasst automatisch nach und zeigt, was erledigt wurde. Für Werkstatt, Beauty, Fitness, Handwerk, Handel, Friseur und Restaurant."
+>
+  <HomeHero />
+  <ProcessFlow />
+  <IndustrySelector />
+  <FeatureGrid />
+  <ReportingSection light {...reporting} />
+  <RoiCalculator />
+  <Pricing />
+  <ContactSection />
+</Base>

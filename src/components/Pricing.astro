@@ -1,0 +1,52 @@
+---
+import Icon from './Icon.astro';
+import { plans } from '../data/plans';
+---
+<section id="preise" class="section section--light" aria-labelledby="preise-title">
+  <div class="container">
+    <div class="section-head section-head--center">
+      <span class="eyebrow">Preise</span>
+      <h2 id="preise-title" class="h2">Wähle, wie viel BusinessPilot übernimmt.</h2>
+      <p class="lead">Drei Pakete. Vom digitalen Empfang bis zum digitalen Prozessmanager.</p>
+    </div>
+    <ul class="pricing" role="list">
+      {plans.map((p) => (
+        <li class:list={['plan card', { 'plan--highlight': p.highlighted }]}>
+          {p.highlighted && <span class="plan__flag">Empfohlen</span>}
+          <h3 class="plan__name">{p.name}</h3>
+          <p class="plan__pos">{p.positioning}</p>
+          <p class="plan__price"><strong>{p.priceMonthly}</strong> <span>/ Monat</span></p>
+          <p class="plan__onboarding">{p.onboarding}</p>
+          {p.includesPrevious && <p class="plan__includes">Alles aus {p.includesPrevious}, plus:</p>}
+          <ul class="plan__features">
+            {p.features.map((f) => <li><Icon name="check" size={18} /> {f}</li>)}
+          </ul>
+          <a class:list={['btn btn--block', p.highlighted ? 'btn--primary' : 'btn--outline']} href="/#kontakt">
+            {p.name} anfragen
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+<style>
+  .pricing { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+  .plan { position: relative; padding: 32px 28px; display: flex; flex-direction: column; gap: 8px; }
+  .plan--highlight { background: var(--navy-900); color: var(--white); border-color: var(--navy-900); box-shadow: 0 0 0 3px var(--green-500), var(--shadow); }
+  .plan__flag { position: absolute; top: -13px; left: 28px; background: var(--green-500); color: var(--navy-900); font-weight: 800; font-size: .75rem; padding: 4px 12px; border-radius: 999px; letter-spacing: .04em; text-transform: uppercase; }
+  .plan__name { font-size: 1rem; letter-spacing: .08em; color: var(--green-700); }
+  .plan--highlight .plan__name { color: var(--green-500); }
+  .plan__pos { font-size: 1.375rem; font-weight: 800; line-height: 1.2; }
+  .plan__price { margin-top: 14px; }
+  .plan__price strong { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .plan__price span, .plan__onboarding { color: var(--text-muted); }
+  .plan--highlight .plan__price span, .plan--highlight .plan__onboarding { color: var(--text-on-dark-muted); }
+  .plan__onboarding { font-size: .9375rem; }
+  .plan__includes { margin-top: 16px; font-weight: 700; font-size: .9375rem; }
+  .plan__features { list-style: none; display: grid; gap: 10px; margin: 12px 0 24px; flex: 1; align-content: start; }
+  .plan:not(:has(.plan__includes)) .plan__features { margin-top: 28px; }
+  .plan__features li { display: flex; gap: 10px; font-weight: 600; }
+  .plan__features :global(svg) { flex: none; color: var(--green-600); margin-top: 3px; }
+  .plan--highlight .plan__features :global(svg) { color: var(--green-500); }
+  @media (max-width: 960px) { .pricing { grid-template-columns: minmax(0, 1fr); max-width: 520px; margin-inline: auto; } }
+</style>

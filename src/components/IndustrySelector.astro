@@ -1,0 +1,80 @@
+---
+import Icon from './Icon.astro';
+import IndustryImage from './IndustryImage.astro';
+import { industries } from '../data/industries';
+---
+<section id="branchen" class="section section--light" aria-labelledby="branchen-title">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Branchen</span>
+      <h2 id="branchen-title" class="h2">Wähle deine Branche</h2>
+      <p class="lead">BusinessPilot spricht die Sprache deiner Kunden. Sieh dir an, welche Anfragen er in deiner Branche übernimmt.</p>
+    </div>
+    <ul class="industry-grid" role="list">
+      {industries.map((ind) => (
+        <li>
+          <a class="industry-card" href={`/branchen/${ind.slug}`}>
+            <span class="industry-card__head">
+              <span class="icon-tile"><Icon name={ind.icon} /></span>
+              <span class="industry-card__name">{ind.name}</span>
+            </span>
+            <IndustryImage class="industry-card__media" src={ind.image.src} alt="" icon={ind.icon} />
+            <span class="industry-card__teaser">{ind.cardTeaser}</span>
+            <span class="industry-card__more">Mehr erfahren <Icon name="arrowRight" size={16} /></span>
+          </a>
+        </li>
+      ))}
+      <li>
+        <a class="industry-card industry-card--other" href="/branche-anfragen">
+          <span class="industry-card__head">
+            <span class="icon-tile icon-tile--dark"><Icon name="compass" /></span>
+            <span class="industry-card__name">Deine Branche ist nicht dabei?</span>
+          </span>
+          <span class="industry-card__other-body">
+            BusinessPilot lässt sich auch auf andere Geschäftsmodelle und Abläufe anpassen.
+          </span>
+          <span class="industry-card__other-cta">Branche anfragen <Icon name="arrowRight" size={16} /></span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  .industry-grid { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+  .industry-grid > li { display: flex; }
+  .industry-card {
+    display: flex; flex-direction: column; gap: 14px; width: 100%;
+    padding: 16px; background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg);
+    text-decoration: none; color: var(--text); box-shadow: var(--shadow-sm);
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .industry-card:hover, .industry-card:focus-visible {
+    border-color: var(--green-500); box-shadow: 0 0 0 1px var(--green-500), var(--shadow); transform: translateY(-2px);
+  }
+  .industry-card__head { display: flex; align-items: center; gap: 12px; }
+  .industry-card__name { font-weight: 800; font-size: 1.0625rem; line-height: 1.25; }
+  .industry-card :global(.industry-card__media) { aspect-ratio: 4 / 3; border-radius: var(--radius); }
+  .industry-card__teaser { font-size: .875rem; color: var(--text-muted); flex: 1; }
+  .industry-card__more { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .9375rem; color: var(--green-700); }
+  .industry-card:hover .industry-card__more :global(svg) { transform: translateX(3px); }
+  .industry-card__more :global(svg) { transition: transform .15s ease; }
+
+  .industry-card--other {
+    position: relative; overflow: hidden; color: var(--white);
+    background-color: var(--navy-900);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%2319c37d' stroke-opacity='.13' stroke-width='2'%3E%3Cpath d='M18 14h11a7 7 0 0 1 2.6 13.5A7.3 7.3 0 0 1 28.8 42H18z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 56px 56px;
+    border-color: var(--navy-700);
+  }
+  .industry-card--other .industry-card__name { color: var(--white); }
+  .industry-card__other-body { flex: 1; color: var(--text-on-dark-muted); font-size: .9375rem; display: flex; align-items: center; min-height: 120px; }
+  .industry-card__other-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; align-self: flex-start;
+    padding: 10px 16px; border-radius: 12px; background: var(--green-500); color: var(--navy-900); font-weight: 700; font-size: .9375rem;
+  }
+  .industry-card--other:hover .industry-card__other-cta { background: var(--green-600); }
+
+  @media (max-width: 1024px) { .industry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .industry-grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

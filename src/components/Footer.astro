@@ -1,0 +1,51 @@
+---
+import Logo from './Logo.astro';
+import { industries } from '../data/industries';
+import { CONTACT_EMAIL } from '../data/site';
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="container site-footer__grid">
+    <div>
+      <Logo />
+      <p class="site-footer__claim">Dein digitaler Mitarbeiter für Kundenkommunikation und wiederkehrende Abläufe.</p>
+    </div>
+    <nav aria-label="Branchen">
+      <h2 class="site-footer__title">Branchen</h2>
+      <ul>
+        {industries.map((i) => <li><a href={`/branchen/${i.slug}`}>{i.name}</a></li>)}
+        <li><a href="/branche-anfragen">Andere Branche anfragen</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Produkt">
+      <h2 class="site-footer__title">Produkt</h2>
+      <ul>
+        <li><a href="/#funktionen">Funktionen</a></li>
+        <li><a href="/#rechner">ROI-Rechner</a></li>
+        <li><a href="/#preise">Preise</a></li>
+        <li><a href="/#kontakt">Demo vereinbaren</a></li>
+      </ul>
+    </nav>
+    <div>
+      <h2 class="site-footer__title">Kontakt</h2>
+      <ul>
+        <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="container site-footer__bottom">
+    <span>© {year} BusinessPilot</span>
+  </div>
+</footer>
+<style>
+  .site-footer { background: var(--navy-950); color: var(--text-on-dark-muted); padding-block: 64px 32px; }
+  .site-footer__grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
+  .site-footer__claim { margin-top: 16px; max-width: 320px; font-size: .9375rem; }
+  .site-footer__title { color: var(--white); font-size: .875rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
+  .site-footer ul { list-style: none; display: grid; gap: 10px; }
+  .site-footer a { text-decoration: none; font-size: .9375rem; }
+  .site-footer a:hover { color: var(--white); }
+  .site-footer__bottom { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--navy-line); font-size: .875rem; }
+  @media (max-width: 860px) { .site-footer__grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .site-footer__grid { grid-template-columns: 1fr; } }
+</style>

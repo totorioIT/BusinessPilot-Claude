@@ -1,0 +1,128 @@
+---
+import Icon from './Icon.astro';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+---
+<section id="anfragen" class="section" aria-labelledby="anfragen-title">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Aus dem Alltag · {industry.name}</span>
+      <h2 id="anfragen-title" class="h2">Diese Anfragen kennen Sie aus Ihrem Alltag</h2>
+      <p class="lead">Echte Sätze Ihrer Kunden. Und was BusinessPilot daraus macht.</p>
+    </div>
+
+    <ul class="said" role="list" aria-label="Typische Kundenanfragen">
+      {industry.customerRequests.map((r) => <li><Icon name="chat" size={18} /> „{r.text}“</li>)}
+    </ul>
+
+    <div class="flow-legend" aria-hidden="true">
+      <span>Kunde sagt</span><Icon name="arrowRight" size={16} />
+      <span>BusinessPilot versteht</span><Icon name="arrowRight" size={16} />
+      <span>BusinessPilot handelt</span><Icon name="arrowRight" size={16} />
+      <span>Geschäftliches Ergebnis</span>
+    </div>
+
+    <ol class="requests" role="list">
+      {industry.customerRequests.map((r) => (
+        <li class="request card">
+          <div class="request__col request__said">
+            <span class="request__label">Kunde sagt</span>
+            <p class="request__quote">„{r.text}“</p>
+            {r.plan && <span class="plan-tag">{r.plan}</span>}
+          </div>
+          <div class="request__col">
+            <span class="request__label">BusinessPilot versteht</span>
+            <p class="request__intent">{r.intent}</p>
+          </div>
+          <div class="request__col request__act">
+            <span class="request__label">BusinessPilot handelt</span>
+            {r.integration && <span class="integration-label"><Icon name="plug" /> {r.integration}</span>}
+            <ol class="steps">
+              {r.steps.map((s) => <li>{s}</li>)}
+            </ol>
+            {r.alternative && (
+              <div class="request__alt">
+                <span class="request__alt-label">{r.alternative.label}:</span>
+                <ol class="steps steps--muted">
+                  {r.alternative.steps.map((s) => <li>{s}</li>)}
+                </ol>
+              </div>
+            )}
+            {r.note && <p class="request__note"><Icon name="shield" size={14} /> {r.note}</p>}
+          </div>
+          <div class="request__col request__outcome">
+            <span class="request__label">Ergebnis</span>
+            <p><Icon name="trend" size={18} /> {r.outcome}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+
+    {industry.quickExamples.length > 0 && (
+      <div class="quick">
+        <h3 class="h3">Weitere Anfragen, die BusinessPilot übernimmt</h3>
+        <ul class="quick__grid" role="list">
+          {industry.quickExamples.map((q) => (
+            <li class="quick__card">
+              <q>{q.text}</q>
+              <span><Icon name="arrowRight" size={14} /> {q.result}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</section>
+<style>
+  .said { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }
+  .said li {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px;
+    background: var(--green-50); border: 1px solid var(--green-100); font-weight: 700; font-size: clamp(.9375rem, 1.4vw, 1.0625rem);
+  }
+  .said :global(svg) { color: var(--green-700); flex: none; }
+  .flow-legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px;
+    font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted);
+  }
+  .flow-legend :global(svg) { color: var(--green-600); }
+  .requests { list-style: none; display: grid; gap: 16px; }
+  .request { display: grid; grid-template-columns: 1.1fr 0.9fr 1.5fr 1fr; overflow: hidden; }
+  .request__col { padding: 22px 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .request__col + .request__col { border-left: 1px solid var(--gray-200); }
+  .request__label { font-size: .75rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+  .request__said { background: var(--green-50); }
+  .request__quote { font-size: 1.25rem; font-weight: 800; line-height: 1.3; }
+  .request__intent { font-weight: 700; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 6px; font-size: .9375rem; }
+  .steps li { counter-increment: s; display: flex; gap: 10px; align-items: baseline; }
+  .steps li::before {
+    content: counter(s); flex: none; width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center;
+    background: var(--navy-900); color: var(--green-500); font-size: .6875rem; font-weight: 800; transform: translateY(-1px);
+  }
+  .steps--muted li::before { background: var(--gray-200); color: var(--text-muted); }
+  .request__alt { width: 100%; padding-top: 10px; border-top: 1px dashed var(--gray-300); display: grid; gap: 8px; }
+  .request__alt-label { font-weight: 700; font-size: .875rem; color: var(--text-muted); }
+  .request__note { display: flex; gap: 6px; align-items: flex-start; font-size: .8125rem; color: var(--text-muted); }
+  .request__note :global(svg) { flex: none; margin-top: 3px; color: var(--green-700); }
+  .request__outcome p { display: flex; gap: 8px; font-weight: 800; font-size: 1.0625rem; color: var(--green-700); line-height: 1.35; }
+  .request__outcome :global(svg) { flex: none; margin-top: 3px; }
+  .quick { margin-top: 56px; }
+  .quick__grid { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+  .quick__card { border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 16px; display: grid; gap: 10px; align-content: space-between; background: var(--white); }
+  .quick__card q { quotes: '„' '“'; font-weight: 700; }
+  .quick__card span :global(svg) { flex: none; }
+  .quick__card span { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; font-weight: 700; color: var(--green-700); }
+  @media (max-width: 1024px) {
+    .request { grid-template-columns: 1fr 1fr; }
+    .request__col:nth-child(3) { border-left: 0; }
+    .request__col:nth-child(n + 3) { border-top: 1px solid var(--gray-200); }
+    .quick__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .request { grid-template-columns: minmax(0, 1fr); }
+    .request__col + .request__col { border-left: 0; border-top: 1px solid var(--gray-200); }
+    .flow-legend { display: none; }
+    .quick__grid { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>

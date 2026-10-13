@@ -1,0 +1,134 @@
+---
+import Icon from './Icon.astro';
+---
+<section class="hero" aria-labelledby="hero-title">
+  <div class="container hero__grid">
+    <div class="hero__content">
+      <span class="badge"><span class="hero__dot" aria-hidden="true"></span>BusinessPilot · Pre-Launch</span>
+      <h1 id="hero-title" class="hero__title">
+        Keine Anfrage<br />mehr verpassen.<br /><span class="text-green">Dein digitaler Mitarbeiter.</span>
+      </h1>
+      <p class="hero__text">
+        BusinessPilot nimmt Anrufe, WhatsApp-Nachrichten und Website-Anfragen an, versteht das Anliegen,
+        bucht Termine und fasst automatisch nach. Damit aus jeder Anfrage ein Abschluss werden kann.
+      </p>
+      <ul class="hero__benefits">
+        <li><Icon name="check" size={18} /> Schneller antworten</li>
+        <li><Icon name="check" size={18} /> Mehr Termine</li>
+        <li><Icon name="check" size={18} /> Weniger Verwaltung</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="#kontakt">BusinessPilot testen <Icon name="arrowRight" size={18} /></a>
+        <a class="btn btn--outline-light" href="#branchen">Branche wählen</a>
+      </div>
+      <p class="hero__trust">Unverbindliche Demo · Persönliches Onboarding · Ohne Technikwissen</p>
+    </div>
+
+    <div class="hero__visual" aria-label="Beispiel: BusinessPilot im Chat mit einem Kunden" role="img">
+      <div class="phone">
+        <div class="phone__bar">
+          <span class="phone__avatar"><Icon name="sparkles" size={16} /></span>
+          <div>
+            <strong>BusinessPilot</strong>
+            <span>antwortet sofort</span>
+          </div>
+        </div>
+        <div class="phone__chat">
+          <p class="msg msg--in">Hallo, ich brauche neue Bremsen. Habt ihr diese Woche noch was frei?</p>
+          <p class="msg msg--out">Gerne! Für welches Fahrzeug? Dann prüfe ich direkt freie Termine.</p>
+          <p class="msg msg--in">VW Golf, Baujahr 2019.</p>
+          <p class="msg msg--out">Danke! Ich habe Donnerstag um 8:30 Uhr oder Freitag um 13:00 Uhr frei. Was passt dir besser?</p>
+          <p class="msg msg--in">Donnerstag passt 👍</p>
+          <p class="msg msg--out msg--confirm"><Icon name="checkCircle" size={16} /> Termin gebucht: Do, 8:30 Uhr. Bestätigung kommt per WhatsApp.</p>
+        </div>
+        <div class="phone__input" aria-hidden="true"><span>Nachricht schreiben …</span></div>
+      </div>
+
+      <div class="float-card float-card--stats">
+        <div class="float-card__head">
+          <span class="icon-tile"><Icon name="chart" /></span>
+          <div>
+            <strong>Heute erledigt</strong>
+            <span>Beispielwerte</span>
+          </div>
+        </div>
+        <dl class="float-card__stats">
+          <div><dt>Anfragen</dt><dd>51</dd></div>
+          <div><dt>Termine</dt><dd>8</dd></div>
+          <div><dt>Zeit gespart</dt><dd>4 h 18</dd></div>
+        </dl>
+        <div class="float-card__bars" aria-hidden="true">
+          <span style="--h:40%"></span><span style="--h:62%"></span><span style="--h:48%"></span><span style="--h:80%"></span><span style="--h:66%"></span><span style="--h:92%"></span><span style="--h:74%"></span>
+        </div>
+      </div>
+
+      <div class="float-card float-card--call">
+        <span class="icon-tile"><Icon name="phone" /></span>
+        <div>
+          <strong>Anruf angenommen</strong>
+          <span>Termin vorgeschlagen · 0:42 min</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { background: var(--navy-900); color: var(--white); padding-block: clamp(56px, 8vw, 104px) clamp(64px, 9vw, 120px); overflow: hidden; }
+  .hero__grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: clamp(40px, 6vw, 80px); align-items: center; }
+  .hero__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); }
+  .hero__title { font-size: clamp(2.5rem, 6vw, 4.5rem); margin-top: 22px; letter-spacing: -0.03em; line-height: 1.04; }
+  .hero__text { margin-top: 24px; font-size: clamp(1.0625rem, 1.5vw, 1.25rem); color: var(--text-on-dark-muted); max-width: 560px; }
+  .hero__benefits { display: flex; flex-wrap: wrap; gap: 10px 22px; list-style: none; margin: 24px 0 32px; font-weight: 600; font-size: .9375rem; }
+  .hero__benefits li { display: inline-flex; align-items: center; gap: 8px; }
+  .hero__benefits :global(svg) { color: var(--green-500); }
+  .hero__trust { margin-top: 18px; font-size: .875rem; color: var(--text-on-dark-muted); }
+
+  .hero__visual { position: relative; display: flex; justify-content: flex-start; padding: 24px 0 24px 8px; max-width: 540px; margin-left: auto; width: 100%; }
+  .phone {
+    width: min(320px, 100%); background: var(--white); color: var(--text); border-radius: 36px;
+    border: 8px solid #182c50; box-shadow: var(--shadow-float); overflow: hidden;
+  }
+  .phone__bar { display: flex; align-items: center; gap: 12px; padding: 18px 18px 14px; border-bottom: 1px solid var(--gray-200); }
+  .phone__bar strong { display: block; font-size: .9375rem; }
+  .phone__bar span { font-size: .75rem; color: var(--green-700); font-weight: 600; }
+  .phone__avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-900); color: var(--green-500); }
+  .phone__chat { display: grid; gap: 10px; padding: 18px 14px 22px; background: var(--gray-50); }
+  .phone__input { padding: 12px 14px 18px; border-top: 1px solid var(--gray-200); }
+  .phone__input span { display: block; padding: 10px 14px; border-radius: 999px; background: var(--gray-100); color: var(--text-muted); font-size: .8125rem; }
+  .msg { max-width: 85%; padding: 10px 13px; border-radius: 16px; font-size: .84375rem; line-height: 1.45; }
+  .msg--in { justify-self: start; background: var(--white); border: 1px solid var(--gray-200); border-bottom-left-radius: 4px; }
+  .msg--out { justify-self: end; background: var(--navy-900); color: var(--white); border-bottom-right-radius: 4px; }
+  .msg--confirm { display: flex; gap: 8px; align-items: flex-start; background: var(--green-50); color: var(--navy-900); border: 1px solid var(--green-100); font-weight: 600; }
+  .msg--confirm :global(svg) { color: var(--green-700); flex: none; margin-top: 2px; }
+
+  .float-card {
+    position: absolute; background: var(--white); color: var(--text); border-radius: var(--radius);
+    border: 1px solid var(--gray-200); box-shadow: var(--shadow-float); padding: 14px 16px;
+  }
+  .float-card strong { display: block; font-size: .875rem; }
+  .float-card span { font-size: .75rem; color: var(--text-muted); }
+  .float-card--stats { right: 0; top: 20%; width: 220px; }
+  .float-card__head { display: flex; gap: 10px; align-items: center; }
+  .float-card__head .icon-tile { width: 36px; height: 36px; }
+  .float-card__head .icon-tile :global(svg) { width: 18px; height: 18px; }
+  .float-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 10px; }
+  .float-card__stats dt { font-size: .6875rem; color: var(--text-muted); }
+  .float-card__stats dd { margin: 0; font-weight: 800; font-size: 1.0625rem; }
+  .float-card__bars { display: flex; align-items: flex-end; gap: 5px; height: 40px; }
+  .float-card__bars span { flex: 1; height: var(--h); background: var(--green-500); border-radius: 3px 3px 0 0; opacity: .85; }
+  .float-card--call { right: 12px; bottom: 16px; display: flex; gap: 10px; align-items: center; }
+  .float-card--call .icon-tile { width: 36px; height: 36px; }
+  .float-card--call .icon-tile :global(svg) { width: 18px; height: 18px; }
+
+  @media (max-width: 960px) {
+    .hero__grid { grid-template-columns: minmax(0, 1fr); }
+    .hero__visual { margin-inline: auto; }
+  }
+  @media (max-width: 560px) {
+    .float-card--stats { position: relative; right: auto; top: auto; width: 100%; margin-top: 16px; }
+    .float-card--call { position: relative; left: auto; bottom: auto; margin-top: 12px; }
+    .hero__visual { flex-direction: column; align-items: center; padding-left: 0; }
+    .float-card--call { right: auto; }
+  }
+</style>

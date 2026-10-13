@@ -1,0 +1,45 @@
+---
+import Icon from './Icon.astro';
+const steps = [
+  { title: 'Anfrage', text: 'Anruf, WhatsApp oder Website: BusinessPilot ist sofort erreichbar.', icon: 'chat' },
+  { title: 'Verstehen', text: 'Das Anliegen wird erkannt, Kunde und Daten werden zugeordnet.', icon: 'sparkles' },
+  { title: 'Handeln', text: 'Termin buchen, Frage beantworten oder Mitarbeiter informieren.', icon: 'zap' },
+  { title: 'Nachfassen', text: 'Offene Angebote und Anfragen werden automatisch nachverfolgt.', icon: 'followup' },
+  { title: 'Abschluss', text: 'Aus der Anfrage wird ein Termin, Auftrag oder Verkauf.', icon: 'checkCircle' },
+];
+---
+<section id="so-funktionierts" class="section" aria-labelledby="flow-title">
+  <div class="container">
+    <div class="section-head section-head--center">
+      <span class="eyebrow">Dein digitaler Mitarbeiter</span>
+      <h2 id="flow-title" class="h2">Nicht viele Tools. Ein Mitarbeiter, der Abläufe zu Ende bringt.</h2>
+      <p class="lead">BusinessPilot beantwortet nicht nur Fragen. Er bringt jede Anfrage bis zum geschäftlichen Ergebnis.</p>
+    </div>
+    <ol class="flow">
+      {steps.map((s, i) => (
+        <li class="flow__step card">
+          <span class="flow__num" aria-hidden="true">{i + 1}</span>
+          <span class="icon-tile"><Icon name={s.icon} /></span>
+          <h3 class="flow__title">{s.title}</h3>
+          <p>{s.text}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+<style>
+  .flow { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; position: relative; }
+  .flow__step { position: relative; padding: 24px 20px; display: grid; gap: 12px; align-content: start; }
+  .flow__num { position: absolute; top: 18px; right: 20px; font-weight: 800; color: var(--gray-300); font-size: 1.5rem; }
+  .flow__title { font-size: 1.1875rem; }
+  .flow__step p { color: var(--text-muted); font-size: .9375rem; }
+  .flow__step:not(:last-child)::after {
+    content: ''; position: absolute; top: 46px; right: -13px; width: 10px; height: 10px;
+    border-top: 2px solid var(--green-500); border-right: 2px solid var(--green-500); transform: rotate(45deg); z-index: 1;
+  }
+  @media (max-width: 1024px) {
+    .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow__step:not(:last-child)::after { display: none; }
+  }
+  @media (max-width: 560px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+</style>

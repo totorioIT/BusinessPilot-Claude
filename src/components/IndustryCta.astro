@@ -1,0 +1,29 @@
+---
+import Icon from './Icon.astro';
+import ContactForm from './ContactForm.astro';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+---
+<section id="kontakt" class="section section--dark" aria-labelledby="cta-title">
+  <div class="container cta">
+    <div>
+      <span class="badge"><Icon name={industry.icon} size={16} /> {industry.name}</span>
+      <h2 id="cta-title" class="h2 cta__title">{industry.cta.title}</h2>
+      <p class="lead">{industry.cta.text}</p>
+      <div class="btn-row cta__buttons">
+        <a class="btn btn--primary" href="#cta-form">BusinessPilot testen <Icon name="arrowRight" size={18} /></a>
+        <a class="btn btn--outline-light" href="#cta-form">Demo vereinbaren</a>
+      </div>
+      <p class="cta__thought">„{industry.visitorThought}“</p>
+    </div>
+    <ContactForm id="cta-form" formal preselect={industry.slug} subject={`BusinessPilot Demo – ${industry.name}`} />
+  </div>
+</section>
+<style>
+  .cta { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+  .cta__title { margin-top: 18px; }
+  .cta__buttons { margin-top: 28px; }
+  .cta__thought { margin-top: 32px; font-size: 1.25rem; font-weight: 800; color: var(--green-500); }
+  @media (max-width: 960px) { .cta { grid-template-columns: minmax(0, 1fr); } }
+</style>

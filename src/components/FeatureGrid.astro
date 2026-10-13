@@ -1,0 +1,127 @@
+---
+import Icon from './Icon.astro';
+import { features, type FeatureExample, type FeatureId } from '../data/features';
+
+interface Props {
+  id?: string;
+  industryName?: string;
+  examples?: Partial<Record<FeatureId, FeatureExample>>;
+  light?: boolean;
+}
+const { id = 'funktionen', industryName, examples = {}, light = false } = Astro.props;
+const lead = industryName
+  ? `13 Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden – hier am Beispiel ${industryName}.`
+  : '13 Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden.';
+const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example }));
+---
+<section id={id} class:list={['section', { 'section--light': light }]} aria-labelledby={`${id}-title`}>
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Funktionen</span>
+      <h2 id={`${id}-title`} class="h2">Was kann BusinessPilot eigentlich alles?</h2>
+      <p class="lead">{lead}</p>
+    </div>
+    <ul class="feature-grid" role="list">
+      {items.map((f) => {
+        const panelId = `${id}-${f.id}-workflow`;
+        const ex = f.example;
+        return (
+          <li class="feature-card card">
+            <div class="feature-card__head">
+              <span class="icon-tile"><Icon name={f.icon} /></span>
+              <h3 class="feature-card__title">{f.title}</h3>
+            </div>
+            <p class="feature-card__desc">{f.description}</p>
+            <div class="quote-box feature-card__example">
+              {ex.isQuote ? <q>{ex.text}</q> : <span>{ex.text}</span>}
+              {ex.sample && <span class="example-label">Beispielwerte</span>}
+            </div>
+            {ex.integration && (
+              <span class="integration-label"><Icon name="plug" /> {ex.integration}</span>
+            )}
+            <button class="feature-card__toggle" type="button" aria-expanded="false" aria-controls={panelId} data-accordion>
+              So reagiert BusinessPilot <Icon name="arrowRight" size={16} />
+            </button>
+            <div id={panelId} class="feature-card__workflow" hidden>
+              <ol>
+                {ex.steps.map((s) => (
+                  <li><Icon name="check" size={14} /> {s}</li>
+                ))}
+              </ol>
+              {ex.outcome && <p class="feature-card__outcome">{ex.outcome}</p>}
+            </div>
+          </li>
+        );
+      })}
+      <li class="feature-cta">
+        <div>
+          <h3 class="feature-cta__title">{industryName ? 'Welche Bausteine brauchen Sie?' : 'Welche Bausteine brauchst du?'}</h3>
+          <p>{industryName
+            ? 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu Ihrem Betrieb.'
+            : 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu deinem Betrieb.'}</p>
+        </div>
+        <a class="btn btn--primary" href="/#preise">Pakete vergleichen <Icon name="arrowRight" size={18} /></a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-accordion]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const panel = document.getElementById(btn.getAttribute('aria-controls') || '');
+      if (!panel) return;
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      panel.hidden = open;
+    });
+  });
+</script>
+
+<style>
+  .feature-grid { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  .feature-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+  .feature-card__head { display: flex; align-items: center; gap: 12px; }
+  .feature-card__title { font-size: 1.1875rem; }
+  .feature-card__desc { color: var(--text-muted); font-size: .9375rem; }
+  .feature-card__example { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: .9375rem; }
+  .feature-card__example q { quotes: '„' '“'; }
+  .feature-card .integration-label { align-self: flex-start; }
+  .feature-card__toggle {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    background: none; border: 0; padding: 4px 0; cursor: pointer;
+    color: var(--green-700); font-weight: 700; font-size: .9375rem;
+  }
+  .feature-card__toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .feature-card__toggle :global(svg) { transition: transform .2s ease; }
+  .feature-card__toggle[aria-expanded='true'] :global(svg) { transform: rotate(90deg); }
+  .feature-card__workflow { border-top: 1px solid var(--gray-200); padding-top: 14px; }
+  .feature-card__workflow ol { list-style: none; display: grid; gap: 0; }
+  .feature-card__workflow li {
+    position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 0 7px 2px;
+    font-size: .9375rem; font-weight: 600;
+  }
+  .feature-card__workflow li :global(svg) {
+    flex: none; width: 22px; height: 22px; padding: 4px; border-radius: 50%;
+    background: var(--green-500); color: var(--navy-900);
+  }
+  .feature-card__workflow li:not(:last-child)::after {
+    content: ''; position: absolute; left: 12px; top: 30px; height: 14px; border-left: 2px solid var(--green-100);
+  }
+  .feature-card__outcome { margin-top: 8px; font-weight: 700; color: var(--green-700); font-size: .9375rem; }
+  .feature-cta {
+    grid-column: span 2; align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+    padding: 28px; border-radius: var(--radius-lg); color: var(--white); background: var(--navy-900);
+  }
+  .feature-cta__title { font-size: 1.5rem; margin-bottom: 8px; }
+  .feature-cta p { color: var(--text-on-dark-muted); max-width: 520px; }
+  .feature-cta .btn { align-self: flex-start; }
+  @media (max-width: 1024px) {
+    .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-cta { grid-column: span 1; }
+  }
+  @media (max-width: 640px) {
+    .feature-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .feature-card { padding: 20px; }
+  }
+</style>

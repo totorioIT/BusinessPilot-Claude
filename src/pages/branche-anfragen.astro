@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import ContactForm from '../components/ContactForm.astro';
+---
+<Base
+  title="Branche anfragen – BusinessPilot für Ihr Geschäftsmodell"
+  description="Ihre Branche ist nicht dabei? BusinessPilot lässt sich auch auf andere Geschäftsmodelle und Abläufe anpassen. Jetzt Anwendungsfall besprechen."
+>
+  <section class="request-page section section--dark" aria-labelledby="req-title">
+    <div class="container request-page__grid">
+      <div>
+        <nav aria-label="Brotkrümelnavigation" class="crumbs">
+          <a href="/">Start</a> <span aria-hidden="true">/</span> <a href="/#branchen">Branchen</a> <span aria-hidden="true">/</span> <span aria-current="page">Branche anfragen</span>
+        </nav>
+        <span class="badge"><Icon name="compass" size={16} /> Individuelle Branche</span>
+        <h1 id="req-title" class="request-page__title">Deine Branche ist nicht dabei?</h1>
+        <p class="lead">BusinessPilot lässt sich auch auf andere Geschäftsmodelle und Abläufe anpassen. Beschreibe kurz, welche Anfragen bei dir ankommen. Wir prüfen gemeinsam, was dein digitaler Mitarbeiter übernehmen kann.</p>
+        <ul class="request-page__points">
+          <li><span class="icon-tile"><Icon name="chat" /></span> Welche Anfragen kommen täglich rein?</li>
+          <li><span class="icon-tile"><Icon name="calendar" /></span> Welche Termine oder Aufträge entstehen daraus?</li>
+          <li><span class="icon-tile"><Icon name="followup" /></span> Wo geht heute etwas verloren?</li>
+        </ul>
+      </div>
+      <ContactForm id="branche-anfragen-form" industryField="text" submitLabel="Anwendungsfall besprechen" subject="BusinessPilot – Branche anfragen" />
+    </div>
+  </section>
+</Base>
+<style>
+  .request-page__grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+  .crumbs { font-size: .875rem; color: var(--text-on-dark-muted); margin-bottom: 22px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .crumbs a { text-decoration: none; }
+  .crumbs a:hover { color: var(--white); }
+  .crumbs [aria-current] { color: var(--white); font-weight: 600; }
+  .request-page__title { font-size: clamp(2.25rem, 5vw, 3.75rem); margin: 20px 0 4px; letter-spacing: -0.03em; }
+  .request-page__points { list-style: none; display: grid; gap: 14px; margin-top: 28px; font-weight: 600; }
+  .request-page__points li { display: flex; align-items: center; gap: 12px; }
+  @media (max-width: 960px) { .request-page__grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

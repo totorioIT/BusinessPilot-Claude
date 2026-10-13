@@ -1,0 +1,94 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+// Hauptnavigation. Branchenseiten erscheinen hier bewusst nicht.
+const nav = [
+  { href: '/#so-funktionierts', label: 'So funktioniert’s' },
+  { href: '/#branchen', label: 'Branchen' },
+  { href: '/#funktionen', label: 'Funktionen' },
+  { href: '/#rechner', label: 'ROI-Rechner' },
+  { href: '/#preise', label: 'Preise' },
+];
+---
+<header class="site-header" data-header>
+  <div class="container site-header__inner">
+    <a href="/" class="site-header__logo" aria-label="BusinessPilot Startseite"><Logo /></a>
+    <nav class="site-nav" aria-label="Hauptnavigation">
+      <ul>
+        {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+      </ul>
+    </nav>
+    <div class="site-header__actions">
+      <a class="btn btn--primary site-header__cta" href="/#kontakt">BusinessPilot testen</a>
+      <button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" data-nav-toggle>
+        <span class="sr-only" data-nav-label>Menü öffnen</span>
+        <Icon name="menu" class="icon-open" />
+        <Icon name="close" class="icon-close" />
+      </button>
+    </div>
+  </div>
+  <nav id="mobile-nav" class="mobile-nav" aria-label="Mobile Navigation" hidden>
+    <ul class="container">
+      {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+      <li><a class="btn btn--primary btn--block" href="/#kontakt">BusinessPilot testen</a></li>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+  const menu = document.getElementById('mobile-nav');
+  const label = document.querySelector('[data-nav-label]');
+  const setOpen = (open: boolean) => {
+    if (!toggle || !menu) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    menu.hidden = !open;
+    if (label) label.textContent = open ? 'Menü schließen' : 'Menü öffnen';
+  };
+  toggle?.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+  menu?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+</script>
+
+<style>
+  .site-header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11, 27, 51, 0.96);
+    border-bottom: 1px solid var(--navy-line);
+    backdrop-filter: saturate(140%) blur(8px);
+  }
+  .site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 72px; }
+  .site-header__logo { text-decoration: none; }
+  .site-nav ul { display: flex; gap: 28px; list-style: none; }
+  .site-nav a, .mobile-nav a:not(.btn) {
+    color: var(--text-on-dark-muted); text-decoration: none; font-weight: 600; font-size: 0.9375rem;
+  }
+  .site-nav a:hover { color: var(--white); }
+  .site-header__actions { display: flex; align-items: center; gap: 12px; }
+  .site-header__cta { min-height: 42px; padding: 9px 18px; font-size: 0.9375rem; }
+  .site-header__toggle {
+    display: none; width: 44px; height: 44px; place-items: center;
+    background: transparent; border: 1px solid var(--navy-line); border-radius: 10px; color: var(--white); cursor: pointer;
+  }
+  .site-header__toggle :global(.icon-close) { display: none; }
+  .site-header__toggle[aria-expanded='true'] :global(.icon-open) { display: none; }
+  .site-header__toggle[aria-expanded='true'] :global(.icon-close) { display: block; }
+  .mobile-nav { border-top: 1px solid var(--navy-line); background: var(--navy-900); }
+  .mobile-nav ul { list-style: none; display: grid; gap: 4px; padding-block: 12px 20px; }
+  .mobile-nav li a:not(.btn) { display: block; padding: 12px 0; color: var(--white); font-size: 1.0625rem; }
+  .mobile-nav li:last-child { margin-top: 8px; }
+  @media (max-width: 960px) {
+    .site-nav { display: none; }
+    .site-header__toggle { display: inline-grid; }
+  }
+  @media (max-width: 480px) {
+    .site-header__cta { display: none; }
+  }
+</style>

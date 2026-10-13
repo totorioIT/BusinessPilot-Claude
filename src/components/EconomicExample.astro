@@ -1,0 +1,48 @@
+---
+import Icon from './Icon.astro';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+const ex = industry.economicExample;
+---
+<section class="section section--light" aria-labelledby="econ-title">
+  <div class="container econ">
+    <div>
+      <span class="eyebrow">Wirtschaftlicher Effekt</span>
+      <h2 id="econ-title" class="h2">Was kostet eine verpasste Anfrage?</h2>
+      <p class="lead">Jede unbeantwortete Anfrage ist ein möglicher Auftrag, der an die Konkurrenz geht. Ein vereinfachtes Beispiel für {industry.audience}:</p>
+    </div>
+    <div class="econ__card card">
+      <div class="econ__head">
+        <span class="icon-tile"><Icon name={industry.icon} /></span>
+        <strong>{ex.title}</strong>
+        <span class="example-label">Beispielrechnung</span>
+      </div>
+      <dl class="econ__lines">
+        {ex.lines.map((l) => <div><dt>{l.label}</dt><dd>{l.value}</dd></div>)}
+      </dl>
+      <div class="econ__result">
+        <strong>{ex.result.value}</strong>
+        <span>{ex.result.label}</span>
+      </div>
+      {ex.note && <p class="econ__note">{ex.note}</p>}
+      <p class="econ__disclaimer">Illustratives Szenario mit Beispielwerten. Kein garantiertes Ergebnis.</p>
+    </div>
+  </div>
+</section>
+<style>
+  .econ { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
+  .econ__card { padding: 28px; display: grid; gap: 18px; }
+  .econ__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .econ__head strong { font-size: 1.1875rem; flex: 1; }
+  .econ__lines { margin: 0; display: grid; }
+  .econ__lines div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--gray-200); }
+  .econ__lines dt { color: var(--text-muted); }
+  .econ__lines dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+  .econ__result { background: var(--navy-900); color: var(--white); border-radius: var(--radius); padding: 18px 20px; display: grid; gap: 2px; }
+  .econ__result strong { font-size: clamp(2rem, 4vw, 2.75rem); color: var(--green-500); letter-spacing: -0.02em; line-height: 1.1; }
+  .econ__result span { color: var(--text-on-dark-muted); font-weight: 600; }
+  .econ__note { font-weight: 600; }
+  .econ__disclaimer { font-size: .8125rem; color: var(--text-muted); }
+  @media (max-width: 960px) { .econ { grid-template-columns: minmax(0, 1fr); } }
+</style>

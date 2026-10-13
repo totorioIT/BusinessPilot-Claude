@@ -1,0 +1,168 @@
+---
+import Icon from './Icon.astro';
+import { industries } from '../data/industries';
+import { CONTACT_EMAIL, FORM_ENDPOINT } from '../data/site';
+
+interface Props {
+  id?: string;
+  /** 'select' = Branchenauswahl, 'text' = freie Eingabe (Branche anfragen) */
+  industryField?: 'select' | 'text';
+  preselect?: string;
+  submitLabel?: string;
+  subject?: string;
+  /** Sie-Ansprache (Branchenseiten) */
+  formal?: boolean;
+}
+const {
+  id = 'kontaktformular',
+  industryField = 'select',
+  preselect,
+  submitLabel = 'Demo vereinbaren',
+  subject = 'BusinessPilot Anfrage',
+  formal = false,
+} = Astro.props;
+const copy = formal
+  ? {
+      error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus.',
+      sendError: 'Die Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.',
+      thanks: 'Danke für Ihre Anfrage!',
+      soon: 'Wir melden uns in Kürze bei Ihnen.',
+      mail: 'Ihr E-Mail-Programm öffnet sich mit der vorbereiteten Anfrage. Bitte senden Sie sie dort ab.',
+    }
+  : {
+      error: 'Bitte fülle alle Pflichtfelder korrekt aus.',
+      sendError: 'Die Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.',
+      thanks: 'Danke für deine Anfrage!',
+      soon: 'Wir melden uns in Kürze bei dir.',
+      mail: 'Dein E-Mail-Programm öffnet sich mit der vorbereiteten Anfrage. Bitte sende sie dort ab.',
+    };
+---
+<form
+  id={id}
+  class="contact-form card"
+  data-contact-form
+  data-endpoint={FORM_ENDPOINT}
+  data-email={CONTACT_EMAIL}
+  data-subject={subject}
+  data-send-error={copy.sendError}
+  data-mail-text={copy.mail}
+  novalidate
+>
+  <div class="contact-form__grid">
+    <label class="field">
+      <span>Unternehmen <abbr title="Pflichtfeld">*</abbr></span>
+      <input name="Unternehmen" type="text" autocomplete="organization" required />
+    </label>
+    <label class="field">
+      <span>Branche <abbr title="Pflichtfeld">*</abbr></span>
+      {industryField === 'select' ? (
+        <select name="Branche" required>
+          <option value="">Bitte wählen</option>
+          {industries.map((i) => <option value={i.name} selected={i.slug === preselect}>{i.name}</option>)}
+          <option value="Andere Branche">Andere Branche</option>
+        </select>
+      ) : (
+        <input name="Branche" type="text" placeholder="z. B. Physiotherapie, Immobilien, Fahrschule" required />
+      )}
+    </label>
+    <label class="field">
+      <span>Ansprechpartner <abbr title="Pflichtfeld">*</abbr></span>
+      <input name="Ansprechpartner" type="text" autocomplete="name" required />
+    </label>
+    <label class="field">
+      <span>E-Mail <abbr title="Pflichtfeld">*</abbr></span>
+      <input name="E-Mail" type="email" autocomplete="email" required />
+    </label>
+    <label class="field field--full">
+      <span>Was soll BusinessPilot übernehmen?</span>
+      <textarea name="Aufgaben" rows="4" placeholder="z. B. Anrufe annehmen, Termine buchen, Angebote nachfassen"></textarea>
+    </label>
+  </div>
+  <p class="contact-form__error" data-form-error role="alert" hidden>{copy.error}</p>
+  <button class="btn btn--primary" type="submit">{submitLabel} <Icon name="arrowRight" size={18} /></button>
+  <div class="contact-form__success" data-form-success role="status" hidden>
+    <span class="icon-tile"><Icon name="checkCircle" /></span>
+    <div>
+      <strong>{copy.thanks}</strong>
+      <p data-form-success-text>{copy.soon}</p>
+    </div>
+  </div>
+</form>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach((form) => {
+    const error = form.querySelector<HTMLElement>('[data-form-error]');
+    const success = form.querySelector<HTMLElement>('[data-form-success]');
+    const successText = form.querySelector<HTMLElement>('[data-form-success-text]');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fields = Array.from(form.querySelectorAll<HTMLInputElement>('input, select, textarea'));
+      let firstInvalid: HTMLElement | null = null;
+      fields.forEach((f) => {
+        const valid = f.checkValidity();
+        f.setAttribute('aria-invalid', String(!valid));
+        if (!valid && !firstInvalid) firstInvalid = f;
+      });
+      if (firstInvalid) {
+        if (error) error.hidden = false;
+        (firstInvalid as HTMLElement).focus();
+        return;
+      }
+      if (error) error.hidden = true;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const endpoint = form.dataset.endpoint;
+      if (endpoint) {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error(String(res.status));
+        } catch {
+          if (error) {
+            error.textContent = form.dataset.sendError || '';
+            error.hidden = false;
+          }
+          return;
+        }
+      } else {
+        // Kein Formular-Backend konfiguriert: Anfrage im E-Mail-Programm vorbereiten.
+        const body = Object.entries(data).map(([k, v]) => `${k}: ${v}`).join('\n');
+        window.location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(form.dataset.subject || '')}&body=${encodeURIComponent(body)}`;
+        if (successText) successText.textContent = form.dataset.mailText || '';
+      }
+      form.querySelectorAll<HTMLElement>('.contact-form__grid, button[type=submit]').forEach((el) => (el.hidden = true));
+      if (success) {
+        success.hidden = false;
+        success.focus?.();
+      }
+    });
+  });
+</script>
+
+<style>
+  .contact-form { padding: clamp(20px, 3vw, 32px); display: grid; gap: 20px; color: var(--text); }
+  .contact-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .contact-form__grid[hidden], .contact-form button[hidden] { display: none; }
+  .field { display: grid; gap: 6px; font-weight: 600; font-size: .9375rem; }
+  .field--full { grid-column: 1 / -1; }
+  .field abbr { text-decoration: none; color: var(--green-700); }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--gray-300); border-radius: 12px; background: var(--white);
+    font-weight: 500; font-size: 1rem;
+  }
+  .field textarea { resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--green-600); box-shadow: 0 0 0 3px var(--green-100); }
+  .field [aria-invalid='true'] { border-color: #c2410c; }
+  .contact-form > .btn { justify-self: start; }
+  .contact-form__error { color: #b23a0b; font-weight: 600; font-size: .9375rem; }
+  .contact-form__success { display: flex; gap: 14px; align-items: flex-start; }
+  .contact-form__success[hidden] { display: none; }
+  .contact-form__success strong { font-size: 1.125rem; }
+  .contact-form__success p { color: var(--text-muted); }
+  @media (max-width: 640px) {
+    .contact-form__grid { grid-template-columns: minmax(0, 1fr); }
+    .contact-form > .btn { justify-self: stretch; }
+  }
+</style>

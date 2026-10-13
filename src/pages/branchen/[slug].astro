@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import IndustryHero from '../../components/IndustryHero.astro';
+import CustomerRequests from '../../components/CustomerRequests.astro';
+import AutopilotFlows from '../../components/AutopilotFlows.astro';
+import EconomicExample from '../../components/EconomicExample.astro';
+import RoiCalculator from '../../components/RoiCalculator.astro';
+import FeatureGrid from '../../components/FeatureGrid.astro';
+import ReportingSection from '../../components/ReportingSection.astro';
+import PlanRecommendation from '../../components/PlanRecommendation.astro';
+import IndustryCta from '../../components/IndustryCta.astro';
+import { industries, type Industry } from '../../data/industries';
+
+export function getStaticPaths() {
+  return industries.map((industry) => ({ params: { slug: industry.slug }, props: { industry } }));
+}
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+---
+<Base title={industry.seo.title} description={industry.seo.description}>
+  <IndustryHero industry={industry} />
+  <CustomerRequests industry={industry} />
+  <AutopilotFlows industry={industry} />
+  <EconomicExample industry={industry} />
+  <RoiCalculator industrySlug={industry.slug} />
+  <FeatureGrid id="funktionen" light industryName={industry.name} examples={industry.featureExamples} />
+  <ReportingSection
+    items={industry.reporting.items}
+    revenue={industry.reporting.revenue}
+    timeSaved={industry.reporting.timeSaved}
+    lead={`So kann ein Tagesbericht für ${industry.audience} aussehen. Sie sehen jeden Tag, was BusinessPilot übernommen hat.`}
+  />
+  <PlanRecommendation industry={industry} />
+  <IndustryCta industry={industry} />
+</Base>

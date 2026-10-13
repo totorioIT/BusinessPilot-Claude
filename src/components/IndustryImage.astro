@@ -1,0 +1,29 @@
+---
+// Branchenbild mit markengerechtem Platzhalter, solange kein Foto unter public/images/branchen liegt.
+import Icon from './Icon.astro';
+interface Props {
+  src: string;
+  alt: string;
+  icon: string;
+  label?: string;
+  eager?: boolean;
+  class?: string;
+  sizes?: string;
+}
+const { src, alt, icon, label, eager = false, class: className, sizes = '(max-width: 640px) 100vw, 400px' } = Astro.props;
+---
+<div class:list={['media', className]}>
+  <div class="media__fallback" aria-hidden="true">
+    <Icon name={icon} />
+    {label && <span>{label}</span>}
+  </div>
+  <img
+    src={src}
+    alt={alt}
+    sizes={sizes}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+    fetchpriority={eager ? 'high' : 'auto'}
+    onerror="this.classList.add('is-broken')"
+  />
+</div>

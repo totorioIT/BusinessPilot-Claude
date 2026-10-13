@@ -1,0 +1,40 @@
+---
+import Icon from './Icon.astro';
+import type { Industry } from '../data/industries';
+interface Props { industry: Industry }
+const { industry } = Astro.props;
+---
+<section class="section section--dark" aria-labelledby="autopilot-title">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow"><span class="plan-tag">AUTOPILOT</span> Abläufe, die weiterlaufen</span>
+      <h2 id="autopilot-title" class="h2">{industry.autopilotPromise ?? 'BusinessPilot denkt einen Schritt weiter.'}</h2>
+      {industry.keyStatement && <p class="lead">{industry.keyStatement}</p>}
+    </div>
+    <div class="grid grid--2">
+      {industry.autopilotFlows.map((f) => (
+        <article class="apflow">
+          <h3 class="apflow__title">{f.title}</h3>
+          {f.integration && <span class="integration-label"><Icon name="plug" /> {f.integration}</span>}
+          <ol class="apflow__steps">
+            {f.steps.map((s) => <li>{s}</li>)}
+          </ol>
+          {f.message && <p class="apflow__msg">„{f.message}“</p>}
+          <p class="apflow__outcome"><Icon name="checkCircle" size={20} /> {f.outcome}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+<style>
+  .section-head .eyebrow { gap: 10px; }
+  .apflow { background: var(--navy-800); border: 1px solid var(--navy-line); border-radius: var(--radius-lg); padding: 28px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+  .apflow__title { font-size: 1.375rem; }
+  .apflow__steps { list-style: none; display: grid; gap: 0; width: 100%; }
+  .apflow__steps li { position: relative; padding: 10px 0 10px 30px; font-weight: 600; }
+  .apflow__steps li::before { content: ''; position: absolute; left: 4px; top: 16px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--green-500); background: var(--navy-800); }
+  .apflow__steps li:not(:last-child)::after { content: ''; position: absolute; left: 9px; top: 30px; bottom: -8px; border-left: 2px solid rgba(25, 195, 125, .35); }
+  .apflow__steps li:last-child::before { background: var(--green-500); }
+  .apflow__msg { background: var(--white); color: var(--navy-900); border-radius: 16px 16px 16px 4px; padding: 12px 14px; font-weight: 600; max-width: 420px; }
+  .apflow__outcome { display: flex; align-items: center; gap: 8px; color: var(--green-500); font-weight: 800; margin-top: auto; }
+</style>
