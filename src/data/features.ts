@@ -161,7 +161,7 @@ export const features: Feature[] = [
       'Nach einem abgeschlossenen Termin oder Auftrag kann BusinessPilot automatisch nach Feedback fragen und eine Google-Bewertung anstoßen.',
     example: {
       text: 'Auftrag abgeschlossen',
-      steps: ['Zufriedenheit abfragen', 'Bewertungslink senden'],
+      steps: ['Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'],
     },
   },
   {
