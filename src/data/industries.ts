@@ -89,7 +89,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot nimmt Anrufe und WhatsApp-Nachrichten an, erfasst Fahrzeug und Anliegen, bietet Termine an und fasst offene Angebote nach. Ihr Team bleibt in der Halle.',
     cardTeaser: 'Termine, Statusanfragen und Serviceanfragen automatisch annehmen.',
-    image: { src: '/images/branchen/werkstatt.jpg', alt: 'Kfz-Mechaniker arbeitet an einem Fahrzeug auf der Hebebühne' },
+    image: { src: '/images/branchen/werkstatt.jpg', alt: 'Zwei Mechaniker arbeiten in einer Kfz-Werkstatt' },
     overlay: {
       caller: 'Max Müller',
       channel: 'Anruf',
@@ -261,7 +261,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot beantwortet Fragen zu Behandlungen, bucht und verschiebt Termine und holt Stammkundinnen zurück, während Sie behandeln.',
     cardTeaser: 'Behandlungsfragen beantworten, Termine buchen, Kundinnen zurückholen.',
-    image: { src: '/images/branchen/beauty-kosmetik.jpg', alt: 'Kosmetikerin bei einer Gesichtsbehandlung in einem modernen Studio' },
+    image: { src: '/images/branchen/beauty-kosmetik.jpg', alt: 'Kosmetikerin in ihrem hellen Behandlungsraum' },
     overlay: {
       caller: 'Anna Schneider',
       channel: 'WhatsApp',
@@ -390,7 +390,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot beantwortet Fragen zu Mitgliedschaften, bucht Probetrainings, fasst bei Interessenten nach und hilft, Mitglieder zu halten.',
     cardTeaser: 'Probetrainings buchen, Interessenten nachfassen, Mitglieder halten.',
-    image: { src: '/images/branchen/fitnessstudio.jpg', alt: 'Trainer betreut ein Mitglied im Fitnessstudio' },
+    image: { src: '/images/branchen/fitnessstudio.jpg', alt: 'Mitglied trainiert an einem Gerät im Fitnessstudio' },
     overlay: {
       caller: 'Lena Hoffmann',
       channel: 'Website-Chat',
@@ -511,7 +511,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot nimmt Anrufe an, erkennt Notfälle, plant Wartungstermine und bereitet Angebotsanfragen vor. Sie bleiben auf der Baustelle.',
     cardTeaser: 'Anrufe annehmen, Notfälle erkennen, Angebote vorbereiten.',
-    image: { src: '/images/branchen/handwerk.jpg', alt: 'Heizungstechniker wartet eine Heizungsanlage' },
+    image: { src: '/images/branchen/handwerk.jpg', alt: 'Handwerker bearbeitet Holz an einer Maschine in seiner Werkstatt' },
     overlay: {
       caller: 'Familie Weber',
       channel: 'Anruf',
@@ -646,7 +646,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot beantwortet Fragen zu Produkten, Verfügbarkeit und Öffnungszeiten, nimmt Reservierungen auf und informiert Kunden, sobald Ware wieder da ist.',
     cardTeaser: 'Produktfragen beantworten, reservieren, Kunden informieren.',
-    image: { src: '/images/branchen/handel.jpg', alt: 'Verkäuferin berät eine Kundin in einem lokalen Geschäft' },
+    image: { src: '/images/branchen/handel.jpg', alt: 'Beleuchtetes Modegeschäft mit offenem Eingang' },
     overlay: {
       caller: 'Julia Becker',
       channel: 'WhatsApp',
@@ -783,7 +783,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot bucht, verschiebt und vergibt Termine neu, auch wenn gerade alle Hände voll zu tun haben. Kein Klingeln mehr mitten im Färben.',
     cardTeaser: 'Termine buchen, Absagen neu vergeben, Lücken füllen.',
-    image: { src: '/images/branchen/friseur.jpg', alt: 'Friseurin schneidet einer Kundin im Salon die Haare' },
+    image: { src: '/images/branchen/friseur.jpg', alt: 'Friseur schneidet einem Kunden die Haare' },
     overlay: {
       caller: 'Sophie Klein',
       channel: 'WhatsApp',
@@ -904,7 +904,7 @@ export const industries: Industry[] = [
     heroSubtitle:
       'BusinessPilot nimmt Reservierungen per Telefon und WhatsApp an, beantwortet Gästefragen und gibt Gruppenanfragen strukturiert an Sie weiter, auch mitten im Service.',
     cardTeaser: 'Reservierungen annehmen, Gästefragen beantworten, Gruppen anfragen.',
-    image: { src: '/images/branchen/restaurant.jpg', alt: 'Servicekraft bringt Gerichte an einen Tisch im Restaurant' },
+    image: { src: '/images/branchen/restaurant.jpg', alt: 'Servicekraft trägt zwei Teller durch ein Restaurant' },
     overlay: {
       caller: 'Thomas Wagner',
       channel: 'Anruf',

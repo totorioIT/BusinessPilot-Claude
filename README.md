@@ -33,7 +33,7 @@ Branchenseiten stehen bewusst **nicht** in der Hauptnavigation. Sie sind über d
 
 ## Vor dem Livegang
 
-1. **Branchenfotos** ablegen (bis dahin erscheint ein markengerechter Platzhalter):
+1. **Branchenfotos** liegen als Pexels-Fotos (800 px) bereit. Für schärfere Darstellung auf Retina-Displays später durch größere Versionen (ab 1600 px Breite) ersetzen:
    `public/images/branchen/werkstatt.jpg`, `beauty-kosmetik.jpg`, `fitnessstudio.jpg`, `handwerk.jpg`, `handel.jpg`, `friseur.jpg`, `restaurant.jpg`
    Empfehlung: Querformat 1600 × 1280 px, JPG oder WebP, unter 300 KB.
 2. **Domain und E-Mail** in `src/data/site.ts` und `public/robots.txt` eintragen.
