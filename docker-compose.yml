@@ -1,0 +1,30 @@
+# Production-like setup on one server (e.g. Hetzner, Germany). Put a TLS proxy such as Caddy in front.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: businesspilot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bp']
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://bp:${POSTGRES_PASSWORD}@db:5432/businesspilot
+      PUBLIC_URL: ${PUBLIC_URL:-https://app.businesspilot.de}
+    ports:
+      - '127.0.0.1:3001:3001'
+
+volumes:
+  pgdata:

@@ -1,0 +1,1157 @@
+BusinessPilot Technologie-Blueprint 
+
+Für BusinessPilot Werkstatt V1 empfehle ich eine hybride Architektur:
+fonio.ai bleibt zunächst die Voice-/Telefonie-Schicht, während
+BusinessPilot selbst die wertvollen Teile besitzt – Kundendaten,
+Fahrzeuge, Terminlogik, Knowledge Base, Workflows, Follow-ups,
+Angebotslogik, Reporting und ROI-Messung. fonio, 360dialog,
+Google/Microsoft, Brevo und Signaturdienste werden konsequent hinter
+eigenen BusinessPilot-APIs abstrahiert, sodass wir Anbieter später
+austauschen können und nicht bloß ein Reseller-Frontend bauen. [1]
+
+Für den deutschen Markt würde ich BusinessPilot als Managed SaaS
+betreiben: Der Kunde kauft „den digitalen Serviceberater“, nicht fonio,
+n8n, Azure oder 360dialog. Aus der Recherche ergibt sich als bevorzugter
+Stack: fonio + 360dialog + eigene Scheduling Engine über
+Google/Microsoft + eigene RAG-/Knowledge-Schicht + n8n/Brevo +
+Gotenberg/Documenso + direkte Google Business Profile API.
+
+Zielarchitektur und Kostenbasis
+
+Die wichtigste Architekturentscheidung lautet:
+
+                             BUSINESSPILOT
+                                  │
+                  ┌───────────────┼────────────────┐
+                  │               │                │
+             Kunden / CRM     Workflow Core    Knowledge Core
+                  │               │                │
+             Fahrzeuge         Events/Jobs       FAQ/RAG
+                  │               │                │
+              Vorgänge         Campaigns       Servicekatalog
+                  │               │                │
+                  └───────────────┼────────────────┘
+                                  │
+                        Provider Adapter Layer
+                                  │
+           ┌──────────┬───────────┼───────────┬───────────┐
+           │          │           │           │           │
+        fonio      360dialog   Google/MS    Brevo     Signatur
+        Voice      WhatsApp    Kalender     Mail/SMS   Provider
+           │          │           │           │           │
+           └──────────┴───────────┴───────────┴───────────┘
+                                  │
+                             Kunde außen
+
+fonio darf nicht unsere zentrale Kundendatenbank, Terminlogik oder
+Knowledge-Source-of-Truth werden. fonio bietet genau die Mechanismen,
+die wir für die Integration brauchen: Inbound-Webhooks, API-Requests
+während und nach Gesprächen, strukturierte Variablen, Weiterleitung, SIP
+im Team-Tarif sowie Terminplaner. Das macht fonio zu einer sehr guten
+Channel-/Voice-Schicht, aber die eigentliche Businesslogik sollte
+BusinessPilot kontrollieren. [2]
+
+Dasselbe Prinzip gilt für WhatsApp, Kalender, LLMs und Signaturen.
+Intern würde ich Provider Interfaces definieren:
+
+    interface VoiceProvider {}
+    interface MessagingProvider {}
+    interface CalendarProvider {}
+    interface LlmProvider {}
+    interface SignatureProvider {}
+    interface EmailProvider {}
+    interface ReviewProvider {}
+
+So könnte beispielsweise CalendarProvider heute Google Calendar und
+Microsoft Graph unterstützen und später eine Werkstattsoftware wie
+AutoSoft, Werbas, Loco-Soft oder ein anderes DMS ergänzen, ohne dass die
+KI- oder Terminlogik neu geschrieben werden muss.
+
+Vergleich der Technologieoptionen
+
+Die Kosten in der Tabelle sind Nettoplanwerte für die technische
+Kalkulation, keine verbindlichen Angebote. „Klein“ bedeutet hier zur
+Orientierung eine Werkstatt mit einem Standort und eher niedrigem
+Kommunikationsvolumen; „Mittel“ steht für höheres Volumen bzw. mehrere
+parallele Mitarbeiter/Kalender. Anrufminuten, WhatsApp-Template-Mix,
+Anzahl Mitarbeiter/Kalender, Chatvolumen, Signaturen und
+Kampagnenvolumen sind noch offene Variablen und müssen später in unser
+Pricing-Modell eingehen.
+
+  --------------------------------------------------------------------------------------------------
+  Modul          Priorität /         Typischer Planwert  Aufwand*   Kernvorteil / Nachteil
+                 Technologie         klein / mittel                 
+  -------------- ------------------- ------------------- ---------- --------------------------------
+  Telefon-KI     ① fonio.ai          99 € / 299 €        M, 8–15 PT Sehr schneller Marktstart;
+                                                                    APIs/Webhooks vorhanden.
+                                                                    Abhängigkeit von
+                                                                    Voice-Plattform. [3]
+
+                 ② sipgate Flow +    ~30–150 / 120–450 € H, 25–45   Viel mehr Kontrolle; SIP und
+                 OpenAI Realtime                         PT         EU-Realtime möglich. Dafür
+                                                                    Voice-Orchestrierung selbst
+                                                                    betreiben. [4]
+
+                 ③ VITAS             ~100–500 /          M, 6–12 PT Deutscher Managed-Anbieter,
+                                     300–1.000 €                    ISO-27001-Fokus; weniger
+                                     Planwert, Angebot              Plattformkontrolle. [5]
+                                     nötig                          
+
+  WhatsApp       ① 360dialog         49 € + Meta;        M, 8–15 PT Deutsche GmbH, offizieller Meta
+                                     ~55–100 / 80–250 €             Partner, API-first,
+                                                                    Partnerplattform für
+                                                                    Multi-Tenant. [6]
+
+                 ② Meta Cloud API    ~5–60 / 40–200 €    H, 12–20   Kein BSP-Aufschlag; mehr
+                 direkt              nutzungsabhängig    PT         Onboarding-, Support- und
+                                                                    Plattformarbeit selbst. [7]
+
+                 ③ fonio WhatsApp    79 / 249 €          L–M, 5–10  Schnellster Pilot; 800 bzw.
+                                                         PT         2.500 Konversationen. Mehr
+                                                                    Lock-in bei fonio. [8]
+
+  Termine        ① BusinessPilot     ~5–25 / 15–60 €     H, 18–30   Volle Branchenlogik und kein
+                 Scheduling +        Infrastruktur       PT         Scheduling-Lock-in.
+                 Google/MS direkt                                   Google-Standardnutzung derzeit
+                                                                    ohne Zusatzkosten. [9]
+
+                 ② Cronofy           ~50–250 / 200–800 € M, 10–18   Einheitliche Calendar API,
+                                     Budgetreserve;      PT         deutsche Datenregion verfügbar;
+                                     Angebot nötig                  zusätzliche Vendor-Kosten. [10]
+
+                 ③ Cal.com           $12/User Teams,     L–M, 6–12  Schnell, APIs, Round-Robin; für
+                                     $28/User            PT         Werkstatt-Ressourcenlogik
+                                     Organizations                  weniger flexibel als eigener
+                                                                    Core. [11]
+
+  KI-Rezeption   ① eigene            ~30–120 / 100–350 € H, 15–25   Knowledge bleibt unser IP;
+                 RAG-Schicht + Azure                     PT         austauschbares LLM. Mehr
+                 OpenAI EU +                                        Entwicklungsarbeit. [12]
+                 pgvector/Qdrant +                                  
+                 Chatwoot                                           
+
+                 ② Crisp             $45 / $95 / $295    L–M, 5–10  Französischer Anbieter,
+                                     pro Workspace       PT         EU-Datenhaltung,
+                                                                    Inbox/Chat/KB/AI fertig. Höheres
+                                                                    Produkt-Lock-in. [13]
+
+                 ③ Chatwoot Cloud +  $19–99/Agent +      M, 8–15 PT Open Source, APIs,
+                 Captain AI          AI-Credits                     Chat/WhatsApp/Handoff.
+                                                                    Cloudanbieter selbst nicht
+                                                                    deutsch; Self-host möglich. [14]
+
+  Nachfassen     ① BP Event Engine + ~15–60 / 50–200 €   M, 12–20   Core-Entscheidungen bleiben bei
+                 n8n + Brevo                             PT         uns, n8n nur Orchestrierung.
+                                                                    [15]
+
+                 ② Brevo Automation  ab $10,80 + Nutzung M, 8–14 PT EU-hosted Mail/SMS/WhatsApp und
+                 komplett                                           Automation; mehr Kundendaten
+                                                                    beim Anbieter. [16]
+
+                 ③ Make.com          ~10–100 / 50–300 €  L–M, 6–12  Sehr schneller MVP; weniger
+                                     Planwert            PT         Kontrolle über
+                                                                    geschäftskritische Workflows und
+                                                                    Datenflüsse. [17]
+
+  Angebote       ① BP Pricing +      ~15–60 / 30–100 €   M, 15–25   Angebotslogik und PDF selbst;
+                 Gotenberg +         bei geteilter       PT         API-/Embedded-Signatur möglich.
+                 Documenso           Plattform                      [18]
+
+                 ② FP Sign           Test kostenlos;     M, 10–18   Sehr starke deutsche
+                                     Produktion aktuell  PT         Datenschutz-/Signaturposition;
+                                     6.900 €/Jahr                   für kleine Werkstätten preislich
+                                     Enterprise Starter             eher zu groß. [19]
+
+                 ③ DocuSign          grob ab ~$40/User,  M, 10–18   Sehr reif und bekannt; teurer
+                                     höhere Pakete nach  PT         und nicht EU-Anbieter. [20]
+                                     Umfang                         
+
+  Google Reviews ① Google APIs       API 0 €, nur        L, 4–8 PT  Maximale Kontrolle und minimale
+                 direkt + BP         Nachrichtenkosten              Kosten. [21]
+
+                 ② ProvenExpert      kostenpflichtiges   L–M, 4–8   Deutsches Reputation-Ökosystem;
+                 ergänzend           API-Paket           PT         Google-Bewertung wird dadurch
+                                     erforderlich                   aber nicht ersetzt. [22]
+
+                 ③ Google direkt +   inkrementell ~0–20  L, 3–6 PT  Einfacher automatischer Versand
+                 Brevo/360dialog     / 5–50 €                       über vorhandene Kanäle. [23]
+                 Versand                                            
+  --------------------------------------------------------------------------------------------------
+
+* Personentage sind unsere Entwicklungsplanwerte, einschließlich
+Integration und Basis-Tests, aber ohne den gemeinsamen
+BusinessPilot-Plattformkern, komplette UI, Penetrationstests und
+umfangreiche DMS-Sonderintegrationen.
+
+Für die eigentliche SaaS-Plattform würde ich zusätzlich etwa 25–40
+Personentage Core-Entwicklung reservieren: Tenant-Modell,
+Authentifizierung, Rollen, PostgreSQL, Audit Log, Secret Management,
+Provider Adapter, Eventbus/Queue, API-Gateway, Monitoring und
+Adminportal. Daraus ergibt sich für eine belastbare Werkstatt-V1 eher
+eine Größenordnung von 110–170 Personentagen als von „zwei Wochen
+KI-Bastelei“.
+
+Die folgende Grafik zeigt bewusst Planwerte der empfohlenen Architektur,
+keine Herstellerangebote. Voice basiert auf den heutigen fonio-Tarifen;
+die übrigen Werte enthalten je nach Modul einen angenommenen Anteil
+geteilter BusinessPilot-Infrastruktur bzw. nutzungsabhängige
+Drittanbieterkosten. fonio listet aktuell 99 € für 1.000 Minuten und 299
+€ für 3.000 Minuten; 360dialog beginnt bei 49 € pro WhatsApp-Nummer plus
+Meta-Gebühren; Google Calendar Standard-API-Nutzung ist derzeit ohne
+Zusatzkosten. [24]
+
+BusinessPilot Modulkosten – Planwerte
+
+Kalkulatorisch wichtig: Der Planwert liegt bei ungefähr 279 €/Monat für
+eine kleine und 734 €/Monat für eine mittlere Vollausstattung, wenn
+viele Komponenten dediziert bzw. mit höherem Nutzungstarif gerechnet
+werden. Deshalb müssen unsere 299-/599-/999-€-Pakete zwingend
+Usage-Limits, Shared Infrastructure und Mehrverbrauchspreise enthalten;
+insbesondere fonio-Minuten, WhatsApp-Nachrichten und Outbound-Kampagnen
+dürfen nicht unbegrenzt inkludiert werden. Die 360dialog Partner
+Platform ist für spätere Multi-Customer-Skalierung interessant, weil sie
+ausdrücklich zur Verwaltung vieler WhatsApp-Business-Accounts über eine
+API vorgesehen ist. [25]
+
+Telefon und WhatsApp
+
+KI-Telefonassistent – klare Empfehlung: fonio.ai für V1 und V2.
+
+Ich würde hier nicht selbst STT, TTS, SIP, Barge-in, Audio-Streaming und
+Call-Control bauen. fonio enthält bereits Rufnummern, mehrsprachige
+Stimmen, Weiterleitung, Kalenderfunktion, API-Requests während und nach
+einem Call, Inbound-Webhook, Variablenextraktion und ab Team einen
+eigenen SIP-Trunk; Solo kostet aktuell 99 € mit 1.000 Minuten und Team
+299 € mit 3.000 Minuten. fonio weist außerdem darauf hin, dass die
+bereitgestellten Telefonnummern über Carrier-Partner Twilio laufen. [8]
+
+Die BusinessPilot-Schnittstelle muss mindestens folgende
+Voice-Funktionen besitzen:
+
+  -------------------------------------------------------------------------
+  API                                     Zweck
+  --------------------------------------- ---------------------------------
+  POST /voice/fonio/inbound               Anrufer erkennen, Kontext laden
+
+  POST /voice/tools/customer/lookup       Kunde/Fahrzeug finden
+
+  POST /voice/tools/availability/search   Termine suchen
+
+  POST /voice/tools/appointments/book     verbindlich buchen
+
+  POST /voice/tools/service-request       Werkstattvorgang anlegen
+
+  GET /voice/tools/order-status           Reparaturstatus
+
+  POST /voice/tools/callback              Rückruf erzeugen
+
+  POST /voice/fonio/post-call             Transkript/Extraktionen/Outcome
+
+  POST /voice/tools/transfer-target       dynamische Weiterleitung
+  -------------------------------------------------------------------------
+
+fonio kann beim eingehenden Anruf fromNumber und toNumber per POST an
+einen Inbound-Webhook senden. Die Antwort kann zusätzliche Felder
+enthalten, die anschließend als Variablen im Assistenten verwendet
+werden – ideal für customer_name, vehicle_plate, tenant_id oder den
+letzten Werkstattvorgang. [26]
+
+Langfristige Exit-Option: Hinter VoiceProvider bauen wir später
+SipgateRealtimeProvider. OpenAI unterstützt inzwischen Realtime-Audio
+via SIP; für EU-Projekte gibt es einen EU-SIP-Endpunkt und EU Data
+Residency. sipgate wiederum bietet deutsche SIP-/Trunking-Infrastruktur
+und mit Flow auch einen API-orientierten Weg für Voice Agents. Damit
+hätten wir technisch einen realistischen Exit von fonio, sobald Volumen
+oder Marge das rechtfertigen. [4]
+
+Ich würde diesen Wechsel nicht jetzt machen. fonio spart uns
+voraussichtlich mehrere Wochen Engineering und vor allem erheblichen
+Voice-Betriebsaufwand.
+
+DSGVO und AI Act: Seit 2. August 2026 gelten die allgemeinen
+Transparenzpflichten des AI Act; Artikel 50 verlangt bei direkt mit
+Menschen interagierenden KI-Systemen grundsätzlich, dass Betroffene
+darüber informiert werden, dass sie mit KI interagieren. Für
+BusinessPilot sollte jeder Anruf daher beispielsweise mit „Hallo, ich
+bin Anna, der KI-Serviceassistent der Werkstatt Müller“ beginnen. [27]
+
+Gesprächsaufzeichnungen sind separat zu behandeln. § 201 StGB schützt
+die Vertraulichkeit des nichtöffentlich gesprochenen Wortes; eine
+unbefugte Aufnahme kann strafbar sein. Deshalb würde ich Recording
+standardmäßig deaktivieren oder erst nach ausdrücklicher Zustimmung
+aktivieren und Transkript/strukturierte Extraktion datensparsam
+konfigurieren. fonio bietet selbst Möglichkeiten zur automatischen
+Löschung von Aufnahme und Transkript, wenn keine Zustimmung vorliegt.
+[28]
+
+Art. 28 DSGVO verlangt die vertragliche Absicherung von
+Auftragsverarbeitern, Art. 32 ein risikoadäquates Sicherheitsniveau
+einschließlich geeigneter technischer und organisatorischer Maßnahmen.
+Deshalb gehören AVV/Subprozessorprüfung, Verschlüsselung,
+Tenant-Isolation, rollenbasierter Zugriff, Löschfristen und Audit
+Logging zwingend in die Produktdefinition. [29]
+
+WhatsApp-Mitarbeiter – klare Empfehlung: 360dialog.
+
+Für einen einzelnen Pilotkunden wäre fonio WhatsApp mit 79 € und 800
+Konversationen sogar die schnellste Lösung. Für BusinessPilot als
+eigenständiges SaaS würde ich WhatsApp jedoch von Voice entkoppeln und
+360dialog verwenden. 360dialog ist ein offizieller Meta Business Partner
+und bietet für 49 € pro Nummer/Monat direkten WhatsApp-API-Zugang plus
+Meta Messaging Fees; entscheidend ist für uns die separate Partner
+Platform für die Verwaltung mehrerer Kundenaccounts. [30]
+
+Die WhatsApp-Schicht muss beherrschen:
+
+messages.inbound, messages.status, Text, Bilder, Dokumente/PDFs, Audio,
+Standort, interaktive Antworten, Templates, Kundenservicefenster,
+Opt-in/Opt-out und menschliche Übernahme.
+
+Meta unterscheidet das offene Customer-Service-Fenster von Nachrichten
+außerhalb dieses Fensters; außerhalb müssen genehmigte Templates
+eingesetzt werden. Cloud API nutzt Webhooks für eingehende Nachrichten
+und Statusereignisse und unterstützt auch Mediendateien. [31]
+
+BusinessPilot sollte deshalb nicht direkt überall
+Meta-/360dialog-Payloads verarbeiten, sondern sie normalisieren:
+
+    {
+      "channel": "whatsapp",
+      "tenant_id": "wrk_01HXYZ",
+      "customer_id": "cus_82AZ",
+      "conversation_id": "conv_773",
+      "direction": "inbound",
+      "message_type": "text",
+      "text": "Habt ihr Dienstag einen Termin zum Reifenwechsel?",
+      "received_at": "2026-08-22T10:42:13+02:00"
+    }
+
+So sieht das restliche Produkt keinen Unterschied mehr zwischen
+Website-Chat, WhatsApp und später vielleicht Instagram oder SMS.
+
+Für Marketing-/Reaktivierungsnachrichten sollten wir Einwilligung,
+Zeitpunkt, Quelle, Scope und Widerruf selbst in BusinessPilot speichern.
+Ein Wechsel von 360dialog zu Meta oder einem anderen BSP darf diese
+Information nicht zerstören.
+
+Termine und KI-Rezeption
+
+Termin-Automatisierung – hier sollten wir den Kern selbst bauen.
+
+Das ist einer der Bereiche, in denen ein eigener BusinessPilot-Service
+echten Produktwert schafft. Google bietet einen freeBusy-Endpunkt und
+das Erstellen von Events per events.insert; Microsoft Graph bietet
+getSchedule, inklusive Free/Busy für Benutzer und Ressourcen. Bei
+Microsoft kann getSchedule sowohl delegiert als auch app-only eingesetzt
+werden, und Google kennt einen freeBusyReader-Zugriff, bei dem private
+Termindetails nicht offengelegt werden müssen. [32]
+
+Damit bauen wir darüber eine eigene Werkstattlogik:
+
+    Kalender sagt:
+    10:00–11:00 frei
+
+    BusinessPilot weiß zusätzlich:
+    Reifenwechsel = 45 Minuten
+    Hebebühne erforderlich
+    Mitarbeiter A darf Reifen
+    4 Räder bereits eingelagert
+    10 Minuten Puffer
+    max. 4 Reifenwechsel pro Vormittag
+
+Genau diese zweite Ebene ist unser Produkt.
+
+BusinessPilot braucht deshalb eigene Entitäten für:
+
+service_types, resources, employees, working_hours, buffers,
+capacity_rules, calendar_connections, appointment_holds, appointments
+und waitlist_entries.
+
+Google und Microsoft sollten nur Synchronisations-/Kalendersystem sein.
+
+Google weist aktuell darauf hin, dass Standardnutzung der Calendar API
+ohne Zusatzkosten verfügbar ist; eine neue Quoten-/Abrechnungslogik für
+Überschreitungen wird 2026 eingeführt. Das müssen wir im Monitoring
+beobachten, ist bei typischen kleinen Werkstätten aber zunächst kein
+Kostentreiber. [33]
+
+Cronofy wäre die beste Abkürzung, wenn wir die zweifache
+Google-/Microsoft-Integration nicht selbst warten wollen. Cronofy bietet
+eine vereinheitlichte Availability-Schicht und eine Datenregion in
+Deutschland, in der EU-Kalenderdaten laut Anbieter innerhalb der EU
+verbleiben können. [10]
+
+Meine Priorität bleibt dennoch:
+
+BusinessPilot Scheduling Core → direkte Google/Microsoft Adapter →
+Cronofy nur als Beschleuniger bei Bedarf.
+
+Die Waitlist würde ich in jedem Fall selbst bauen. Beispiel:
+
+    Kunde A möchte Dienstag
+    ↓
+    kein Slot
+    ↓
+    Waitlist
+    ↓
+    Kunde B storniert 10:30 Uhr
+    ↓
+    BusinessPilot findet:
+    A passt zur Leistung + Dauer + Ressource
+    ↓
+    WhatsApp:
+    „Es ist kurzfristig 10:30 Uhr frei geworden.“
+    ↓
+    Reservierung für 10 Minuten
+    ↓
+    Bestätigung
+    ↓
+    Termin
+
+KI-Rezeption – ebenfalls eigener Kern.
+
+Hier sehe ich ein hohes Lock-in-Risiko, wenn wir jede FAQ direkt in
+fonio, Crisp oder Chatwoot pflegen. Stattdessen sollte BusinessPilot
+eine kanalübergreifende Knowledge API besitzen:
+
+    POST /knowledge/query
+
+mit einem Response wie:
+
+    {
+      "answer": "Ein Reifenwechsel dauert bei uns in der Regel ca. 45 Minuten.",
+      "confidence": 0.94,
+      "sources": [
+        {
+          "type": "service",
+          "id": "srv_reifenwechsel",
+          "version": 12
+        }
+      ],
+      "actionable": true,
+      "suggested_action": "search_appointment"
+    }
+
+fonio, WhatsApp und Webchat fragen alle dieselbe Knowledge-Schicht.
+
+Ich würde für V1 PostgreSQL + pgvector einsetzen und erst bei deutlich
+höherem RAG-Volumen Qdrant ergänzen. Qdrant ist ein europäischer
+Anbieter und bietet Managed-, Private-, Hybrid- und
+On-Premises-Deploymentvarianten. [34]
+
+Beim LLM würde ich einen abstrahierten Provider verwenden und für
+besonders datenschutzbewusste Kunden zunächst Azure OpenAI EU Data Zone
+priorisieren. Microsoft beschreibt EU Data Zone so, dass die
+Verarbeitung innerhalb der EU-Geografie erfolgt; Microsoft erklärt für
+Azure OpenAI außerdem, dass Prompts und Completions nicht OpenAI bzw.
+anderen Modellanbietern zur Verfügung gestellt und nicht ohne Erlaubnis
+zum Training verwendet werden. [35]
+
+Für das Human Handoff empfehle ich Chatwoot, möglichst self-hosted in
+unserer EU-Infrastruktur. Chatwoot unterstützt Website-Livechat,
+WhatsApp, API-Channels, Help Center, Automation und menschliche
+Bearbeitung; die kommerzielle Cloud beginnt aktuell bei $19 pro
+Agent/Jahrstarif, Business bei $39. [36]
+
+Crisp ist die interessanteste vollständig gemanagte europäische
+Alternative: Das französische Unternehmen gibt an, Messaging-Daten in
+den Niederlanden und Plugin-Daten in Deutschland zu speichern;
+Essentials kostet derzeit $95 pro Workspace, Plus $295 und enthält einen
+stärker automatisierten AI-/Omnichannel-Stack. [13]
+
+Für unsere Produktstrategie ist aber eigener Knowledge Core + Chatwoot
+nur als Mitarbeiter-Inbox die stärkste Variante.
+
+Nachfassen und Angebotsautomatisierung
+
+Automatisches Nachfassen darf kein loser n8n-Zoo werden.
+
+Ich würde n8n durchaus einsetzen – aber nicht als Source-of-Truth der
+Geschäftslogik.
+
+BusinessPilot erzeugt Domain Events:
+
+    appointment.completed
+    appointment.cancelled
+    appointment.no_show
+    quote.created
+    quote.expiring
+    customer.inactive
+    vehicle.hu_due
+    vehicle.service_due
+    review.request_due
+    lead.unanswered
+
+Darauf reagiert der BusinessPilot Campaign Core:
+
+    Event
+    ↓
+    Segment prüfen
+    ↓
+    Consent prüfen
+    ↓
+    Suppression prüfen
+    ↓
+    Cooldown/Frequency Cap
+    ↓
+    richtige Kampagne bestimmen
+    ↓
+    Kanal wählen
+    ↓
+    Job terminieren
+    ↓
+    n8n/Brevo/360dialog ausführen
+    ↓
+    Resultat zurückschreiben
+
+n8n ist hierfür als interne Orchestrierungsplattform sehr attraktiv. Der
+Cloud-Starter kostet aktuell 20 €/Monat für 2.500 Workflow-Ausführungen,
+Pro 50 € für 10.000; Business Self-hosted liegt deutlich höher bei 667 €
+monatlich. [37]
+
+Für BusinessPilot würde ich entweder die Community-/Self-hosted-Variante
+intern betreiben oder zunächst Pro Cloud verwenden. Kunden sehen n8n
+niemals.
+
+Brevo ist mein bevorzugter Versand-Layer für E-Mail und SMS. Brevo
+bietet API, Automation, SMS und WhatsApp und erklärt, dass die Daten für
+seine E-Mail-API auf EU-basierten Servern gehostet werden; Preise
+beginnen aktuell im niedrigen zweistelligen Bereich und SMS/WhatsApp
+sind nutzungsabhängig. [38]
+
+Besonders wichtig ist eine zentrale Tabelle:
+
+    communication_consents
+
+beispielsweise:
+
+    {
+      "customer_id": "cus_82AZ",
+      "channel": "whatsapp",
+      "purpose": "service_reminder",
+      "status": "granted",
+      "source": "service_order",
+      "granted_at": "2026-03-18T12:14:00Z",
+      "revoked_at": null
+    }
+
+Damit machen wir Einwilligungen nicht von Brevo, Meta oder irgendeinem
+Workflow abhängig.
+
+Angebots-Automatisierung – AI verstehen lassen, aber nicht rechnen
+lassen.
+
+Das ist eine sehr wichtige Grenze.
+
+Die KI darf aus:
+
+  „Ich brauche wahrscheinlich neue Bremsscheiben vorne für meinen Golf
+  7.“
+
+strukturieren:
+
+    {
+      "intent": "quote_request",
+      "vehicle": "VW Golf VII",
+      "service": "front_brakes",
+      "components": ["brake_discs", "brake_pads"],
+      "confidence": 0.91
+    }
+
+Aber der Preis muss aus einem deterministischen
+Pricing-/ERP-/Werkstattsystem kommen, nicht aus einem Sprachmodell.
+
+Der Flow sollte sein:
+
+    Kundenanfrage
+    ↓
+    KI qualifiziert
+    ↓
+    Fahrzeug/Leistung verifizieren
+    ↓
+    Pricing Engine / Werkstattsoftware
+    ↓
+    Angebotspositionen
+    ↓
+    Mitarbeiterfreigabe, falls erforderlich
+    ↓
+    PDF
+    ↓
+    E-Mail / WhatsApp
+    ↓
+    Annahme / Signatur
+    ↓
+    Termin
+
+Für PDF-Generierung empfehle ich Gotenberg self-hosted. Es bietet
+HTTP-basierte HTML-zu-PDF- und Office/PDF-Konvertierung und lässt sich
+dadurch sauber hinter DocumentService betreiben. [39]
+
+Als Signaturlösung ist für unsere SaaS-Architektur Documenso
+interessant. Der Dienst unterstützt API-basiertes Erstellen und
+Versenden von Dokumenten sowie Embedded Signing; aktuelle Pläne liegen
+unter anderem bei etwa $25 für Individual, $40 für Teams und $250 für
+die Platform-Variante. Self-hosting ist möglich, allerdings müssen wir
+bei Veränderungen/White-Labeling die AGPL-/Commercial-Lizenzbedingungen
+sauber berücksichtigen. [40]
+
+Für besonders datenschutz- oder complianceorientierte deutsche Kunden
+ist FP Sign eine starke Alternative. FP Sign beschreibt die Lösung als
+Privacy-First, bietet EES/FES/QES und REST-API und gibt an, keine Daten
+an Drittländer weiterzugeben; der aktuell veröffentlichte
+Enterprise-Starter liegt allerdings bei 6.900 € jährlich für bis zu 50
+Benutzer und ist damit für eine einzelne kleine Werkstatt wirtschaftlich
+eher zu groß. [19]
+
+Für normale Werkstatt-Kostenvoranschläge würde ich elektronische
+Signaturen zudem nicht zwangsläufig voraussetzen. Technisch bauen wir
+QuoteAccepted als eigenes BusinessPilot-Ereignis; eine qualifizierte
+oder fortgeschrittene elektronische Signatur wird nur dort ergänzt, wo
+der konkrete Vorgang sie tatsächlich benötigt. Die rechtliche Bewertung
+der jeweiligen Vertrags-/Schriftformerfordernisse sollte je
+Anwendungsfall erfolgen.
+
+Google-Bewertungen
+
+Hier ist die klare Empfehlung:
+
+Keine separate Reputation-Plattform für den Kern. Google direkt
+anbinden.
+
+Die Google Business Profile API kann Reviews listen, einzelne Reviews
+abrufen, mehrere Standorte abfragen, Antworten setzen und Antworten
+löschen. Die API ist für registrierte Nutzer derzeit ohne Nutzungsgebühr
+verfügbar. Seit Juli 2026 liefert Google zusätzliche Review-Felder wie
+den reviewReplyUrl und Statusinformationen rund um Antworten. [41]
+
+Unser Ablauf:
+
+    Werkstattauftrag abgeschlossen
+    ↓
+    24 Stunden warten
+    ↓
+    Kunde erhält:
+    „Vielen Dank für Ihren Besuch.“
+    ↓
+    Bewertungslink
+    ↓
+    Google Review
+    ↓
+    BusinessPilot synchronisiert Review
+    ↓
+    4–5 Sterne → Mitarbeiter sieht Erfolg
+    1–3 Sterne → Service-Aufgabe mit hoher Priorität
+    ↓
+    Antwortentwurf
+    ↓
+    Mitarbeiter genehmigt oder Auto-Reply nach Regel
+
+Google verlangt für Review-API-Zugriff OAuth 2.0; Antworten auf Reviews
+sind für verifizierte Standorte möglich. [42]
+
+Ich würde ausdrücklich kein manipulierendes Review-Gating bauen.
+Praktisch bedeutet das: Nicht nur zufriedenen Kunden den Google-Link
+zeigen und unzufriedenen Kunden den öffentlichen Bewertungsweg
+verstecken. Stattdessen erhält jeder nach denselben Regeln berechtigte
+Kunde die Bewertungsmöglichkeit; zusätzlich kann BusinessPilot private
+Kritik sofort intern eskalieren. Das ist die sauberere Produktstrategie
+angesichts Googles Regeln gegen manipulierte bzw. nicht authentische
+Bewertungsaktivitäten. [43]
+
+Technisch brauchen wir:
+
+    review_requests
+    reviews
+    review_replies
+    feedback_cases
+    google_business_connections
+
+Beispiel:
+
+    {
+      "review_request_id": "rr_123",
+      "customer_id": "cus_82AZ",
+      "appointment_id": "apt_771",
+      "channel": "whatsapp",
+      "sent_at": "2026-08-23T10:00:00Z",
+      "clicked_at": "2026-08-23T10:04:12Z",
+      "google_review_detected": true,
+      "rating": 5
+    }
+
+Der Zusammenhang zwischen versendetem Link und konkreter
+Google-Bewertung darf allerdings nicht über aggressive
+Tracking-/Identitätskorrelation erzwungen werden. BusinessPilot kann
+Kampagnenerfolg aggregiert messen und neue Reviews synchronisieren,
+sollte aber personenbezogene Zuordnungen nur speichern, wenn sie
+technisch und rechtlich sauber begründbar sind.
+
+ProvenExpert kann ergänzend sinnvoll sein, wenn ein Kunde ein breiteres
+Reputation-System möchte. Die API kann Profile und Umfragen verwalten,
+Einladungslinks erstellen und Bewertungszahlen abrufen; ein bezahltes
+Paket ist Voraussetzung für weitergehende API-Funktionen. ProvenExpert
+weist allerdings selbst darauf hin, dass seine Bewertungen nicht einfach
+als Google-Bewertungen „zurückgespielt“ werden können. [44]
+
+Für BusinessPilot bleibt deshalb Google direkt + Versand über
+360dialog/Brevo die bessere Standardarchitektur.
+
+Integrationsflows und Payloads
+
+Der zentrale fonio-Call sollte so aussehen. Wichtig ist dabei, dass
+fonio zwar den Dialog führt, aber vor Entscheidungen BusinessPilot
+fragt.
+
+  -----------------------------------------------------------------------
+  [Rendered Mermaid diagram 1]
+
+  -----------------------------------------------------------------------
+
+fonio dokumentiert für den Inbound-Webhook als grundlegende Anfrage:
+
+    {
+      "fromNumber": "+491701234567",
+      "toNumber": "+498912345678"
+    }
+
+BusinessPilot antwortet darauf mit den dynamischen Kontextfeldern. fonio
+kann die zurückgegebenen Felder anschließend als Variablen im
+Assistenten verwenden. [26]
+
+Unsere Antwort könnte beispielsweise sein:
+
+    {
+      "tenant_id": "wrk_01J7M",
+      "bp_session_token": "sess_k9f83j29x",
+      "customer_known": true,
+      "customer_id": "cus_82AZ",
+      "customer_name": "Max Mustermann",
+      "vehicle_id": "veh_12F",
+      "vehicle_plate": "M-MM 1234",
+      "vehicle_model": "VW Golf VII",
+      "last_service": "Inspektion",
+      "preferred_language": "de",
+      "human_transfer_number": "+49891234000"
+    }
+
+bp_session_token ist unsere Variable, nicht ein von fonio vorgegebenes
+Feld. Damit kann fonio bei späteren Tool-Aufrufen BusinessPilot-Kontext
+referenzieren, ohne jedes Mal personenbezogene Stammdaten
+zurückzuschicken.
+
+fonio unterstützt während des Gesprächs konfigurierbare HTTP-Requests
+mit dynamischen Parametern. Genau das verwenden wir für die Tools. [45]
+
+Beispiel fonio → BusinessPilot während des Calls:
+
+    {
+      "session_token": "{{bp_session_token}}",
+      "tool": "appointment.search",
+      "service_code": "reifenwechsel",
+      "requested_date": "2026-08-25",
+      "requested_time_of_day": "afternoon",
+      "vehicle_id": "{{vehicle_id}}"
+    }
+
+BusinessPilot validiert Tenant, Session und Eingaben und fragt dann erst
+Kalender bzw. Werkstattlogik ab.
+
+Beispiel BusinessPilot → fonio als Tool-Response:
+
+    {
+      "ok": true,
+      "result": "slots_available",
+      "slots": [
+        {
+          "slot_id": "slot_20260825_1400_A",
+          "starts_at": "2026-08-25T14:00:00+02:00",
+          "ends_at": "2026-08-25T14:45:00+02:00"
+        },
+        {
+          "slot_id": "slot_20260825_1530_A",
+          "starts_at": "2026-08-25T15:30:00+02:00",
+          "ends_at": "2026-08-25T16:15:00+02:00"
+        }
+      ],
+      "spoken_summary": "Am Dienstag sind um 14 Uhr und um 15:30 Uhr Termine frei.",
+      "requires_customer_confirmation": true
+    }
+
+Erst nach der Kundenaussage „14 Uhr“ erfolgt der zweite Tool-Aufruf:
+
+    {
+      "session_token": "{{bp_session_token}}",
+      "tool": "appointment.book",
+      "slot_id": "slot_20260825_1400_A",
+      "service_code": "reifenwechsel",
+      "customer_id": "{{customer_id}}",
+      "vehicle_id": "{{vehicle_id}}",
+      "customer_confirmed": true
+    }
+
+BusinessPilot antwortet:
+
+    {
+      "ok": true,
+      "result": "appointment_booked",
+      "appointment_id": "apt_8XK223",
+      "starts_at": "2026-08-25T14:00:00+02:00",
+      "confirmation_code": "BP-8421",
+      "spoken_summary": "Der Termin am Dienstag um 14 Uhr ist verbindlich gebucht."
+    }
+
+Der Buchungsflow sollte zusätzlich Idempotency und einen kurzen
+BusinessPilot-Hold kennen, damit zwei parallele Anrufer nicht denselben
+Slot buchen:
+
+  -----------------------------------------------------------------------
+  [Rendered Mermaid diagram 2]
+
+  -----------------------------------------------------------------------
+
+Für Post-Call würde ich fonio eine von uns definierte Payload senden
+lassen; das ist also kein behauptetes fixes fonio-Standardformat,
+sondern die Konfiguration unseres „API Request after call“. fonio
+unterstützt solche Requests sowie Variablenextraktion. [8]
+
+    {
+      "session_token": "{{bp_session_token}}",
+      "outcome": "{{outcome}}",
+      "intent": "{{intent}}",
+      "appointment_id": "{{appointment_id}}",
+      "customer_name_extracted": "{{customer_name_extracted}}",
+      "vehicle_plate_extracted": "{{vehicle_plate_extracted}}",
+      "callback_required": "{{callback_required}}",
+      "summary": "{{call_summary}}"
+    }
+
+Sicherheitsseitig sollten alle Tool-Endpoints nur über TLS erreichbar
+sein, sehr kurzlebige bzw. tenantgebundene Session-Tokens verwenden,
+striktes Schema-Validation durchführen und idempotente
+Schreiboperationen besitzen. Wo fonio benutzerdefinierte
+Authentifizierungsheader in der konkreten Konfiguration zulässt,
+verwenden wir zusätzlich einen serverseitigen API-Key/Bearer-Token;
+andernfalls muss vor Produktion eine gleichwertige
+Authentisierungslösung mit fonio verifiziert werden. Art. 32 DSGVO
+verlangt ein der Verarbeitung angemessenes Sicherheitsniveau. [29]
+
+Betriebsmodell, SLA und Umsetzungsreihenfolge
+
+BusinessPilot sollte nach außen Managed SaaS und nach innen modular
+sein.
+
+Der Werkstattkunde bekommt:
+
+  BusinessPilot Pro – Ihr digitaler Serviceberater
+
+und nicht:
+
+  fonio + n8n + Azure OpenAI + 360dialog + Chatwoot + Brevo +
+  PostgreSQL.
+
+Das reduziert Verkaufskomplexität und verhindert, dass wir
+ausschließlich über Einkaufspreise verglichen werden.
+
+Meine endgültige Provider-Aufteilung für die erste Produktionsversion
+wäre:
+
+  -----------------------------------------------------------------------
+  Verantwortungsbereich      Festgelegte V1-Lösung
+  -------------------------- --------------------------------------------
+  Telefon / Voice            fonio.ai
+
+  WhatsApp Transport         360dialog
+
+  WhatsApp Conversation      BusinessPilot
+  Logic                      
+
+  Kunden / Fahrzeuge / Leads BusinessPilot PostgreSQL
+
+  Scheduling Rules           BusinessPilot Scheduling Core
+
+  Google Calendar            direkte Google API
+
+  Microsoft 365 Kalender     Microsoft Graph direkt
+
+  Waitlist                   BusinessPilot
+
+  Knowledge Base             BusinessPilot
+
+  Vector Search              pgvector zunächst, Qdrant optional
+
+  LLM                        Provider-Abstraction, Azure OpenAI EU
+                             bevorzugt
+
+  Website Chat               eigener BP Widget/API
+
+  Human Inbox                Chatwoot self-hosted
+
+  Event-/Campaign Core       BusinessPilot
+
+  Workflow Orchestration     n8n intern
+
+  E-Mail/SMS                 Brevo
+
+  Angebotslogik              BusinessPilot
+
+  PDF                        Gotenberg
+
+  E-Sign                     Documenso, optional FP Sign
+
+  Google Bewertungen         Google Business Profile direkt
+
+  Analytics / ROI            BusinessPilot
+  -----------------------------------------------------------------------
+
+Beim SLA würde ich drei Ebenen unterscheiden.
+
+BusinessPilot Core sollte intern auf mindestens 99,9 % Verfügbarkeit als
+Service-Ziel ausgelegt werden, mit Monitoring, Alerting, automatisierten
+Backups, Multi-Tenant-Isolation und dokumentierter Incident Response.
+Das wäre zunächst ein eigenes Serviceziel, kein Versprechen über
+sämtliche Drittanbieter.
+
+Beim Voice-SLA dürfen wir vertraglich nicht mehr garantieren, als unsere
+Abhängigkeiten hergeben. fonio nennt ein individuelles SLA erst explizit
+im Scale-Tarif; entsprechend würde ich für größere Kunden, die ein
+verbindliches Voice-SLA verlangen, Scale oder eine gesonderte
+Vereinbarung voraussetzen. [8]
+
+Noch wichtiger ist ein Degraded Mode:
+
+    BusinessPilot vollständig verfügbar
+    → KI darf Termine buchen, Status geben, Vorgänge erstellen
+
+    Kalender nicht verfügbar
+    → keine erfundenen Slots
+    → Rückruf / Terminwunsch aufnehmen
+
+    BusinessPilot teilweise nicht verfügbar
+    → fonio beantwortet nur sichere statische FAQs
+    → Rückruf erzeugen
+
+    BusinessPilot komplett nicht erreichbar
+    → definierte Weiterleitung / Fallback-Nummer
+
+Dieser Mechanismus ist wichtiger als eine beeindruckende LLM-Antwort.
+
+Für Datenschutz und Betrieb sollte V1 mindestens folgende Kontrollen
+besitzen: AVVs mit allen Auftragsverarbeitern, dokumentierte
+Subprozessoren, EU-/Deutschland-Region wo verfügbar, Verschlüsselung in
+Transit und at Rest, Rollen-/Tenant-Isolation, Audit Trail, Secret
+Management, definierte Löschfristen, Export-/Löschprozess für
+Betroffenenrechte und Datenminimierung im LLM-Kontext. Diese Prinzipien
+folgen unmittelbar aus den Anforderungen an Auftragsverarbeitung,
+Privacy by Design und Verarbeitungssicherheit der DSGVO. [29]
+
+Für fonio ist zusätzlich wichtig, vor Skalierung den kommerziellen
+Partner-/Reseller-/Multi-Client-Modus zu klären. Die öffentlich
+sichtbaren Tarife sind kundenorientiert und koppeln Minuten, parallele
+Gespräche, Telefonnummern und Workspaces an Tarife; das ist für 100
+BusinessPilot-Kunden wirtschaftlich etwas anderes als für eine einzelne
+Werkstatt. [8]
+
+Bei 360dialog ist die Produktisierung bereits expliziter vorgesehen: Die
+Partner Platform ist für die Verwaltung vieler WhatsApp Business
+Accounts über eine API gedacht; aktuelle veröffentlichte Stufen beginnen
+bei 250 €/Monat plus Channel-Gebühren und reduzieren die Channel-Kosten
+in höheren Partnerstufen. [25]
+
+Die Entwicklungsreihenfolge sollte deshalb ab jetzt feststehen:
+
+Zuerst entsteht der gemeinsame BusinessPilot Core: Mandanten,
+Benutzer/Rollen, Kunden, Fahrzeuge, Vorgänge, Events, Audit Log,
+Provider Interfaces, Secrets und API-Authentifizierung.
+
+Danach integrieren wir fonio vollständig: Inbound-Kontext,
+Kunden-/Fahrzeugerkennung, Appointment Search, Booking, Callback,
+Transfer und Post-Call Outcome. Damit haben wir das erste tatsächlich
+verkaufbare Produkt.
+
+Anschließend bauen wir den eigenen Scheduling Core inklusive Google
+Calendar und Microsoft Graph. Erst wenn BusinessPilot Termine
+zuverlässig selbst kontrolliert, sollten Voice und WhatsApp echte
+Buchungen ausführen.
+
+Danach kommt 360dialog mit einer gemeinsamen Conversation Engine. Ein
+Kunde kann dann eine Unterhaltung am Telefon beginnen und später über
+WhatsApp Bestätigung, Reminder oder Rückfrage erhalten.
+
+Als nächstes entsteht der Knowledge-/Reception Core und der
+Website-Chat. Erst dann haben Telefon, WhatsApp und Web dieselbe
+Wissensbasis und dieselbe Kundenhistorie.
+
+Danach folgen Campaign Engine und n8n/Brevo für HU-Erinnerungen,
+Inspektion, Reifenwechsel, No-Shows, offene Angebote und
+Kundenreaktivierung.
+
+Anschließend kommen Angebotslogik, Gotenberg und optional Documenso.
+Dadurch entwickelt sich BusinessPilot vom Rezeptionisten zum digitalen
+Serviceberater, der aus Anfragen konkrete Aufträge macht.
+
+Zum Schluss der Werkstatt-V1 integrieren wir Google Reviews und das
+vollständige ROI-Tracking. Google stellt die Business Profile API für
+registrierte Nutzer ohne API-Nutzungsgebühr bereit und erlaubt
+programmgesteuertes Lesen und Beantworten von Reviews. [21]
+
+Die entscheidende Zielarchitektur ist damit nicht:
+
+    fonio
+    +
+    WhatsApp
+    +
+    Chatbot
+    +
+    Automationen
+
+sondern:
+
+                     BUSINESSPILOT
+                           │
+              versteht jeden Kundenkontakt
+                           │
+                    führt Aktion aus
+                           │
+                  verfolgt das Ergebnis
+                           │
+                misst Zeit und Umsatz
+
+Das ist die technische und kommerzielle Differenzierung. fonio kann
+einen Anruf führen; WhatsApp kann eine Nachricht transportieren; Google
+kann einen Termin speichern; Brevo kann einen Reminder verschicken.
+BusinessPilot weiß dagegen, dass Herr Müller mit seinem Golf wegen eines
+Reifenwechsels angerufen hat, einen Termin am Dienstag bekommen hat,
+erschienen ist, einen Auftrag über 289 € ausgelöst hat und anschließend
+um eine Bewertung gebeten wurde.
+
+Genau diese durchgängige Customer-/Revenue-Chain sollte unser geistiges
+Eigentum und der Kern des Produkts werden.
+
+[1] [2] [3] [8] [24] [30] fonio Preise - KI-Telefonassistent ab 85€ im
+Monat
+
+https://www.fonio.ai/de/preise?utm_source=chatgpt.com
+
+[4] Introducing gpt-realtime and Realtime API updates for ...
+
+https://openai.com/index/introducing-gpt-realtime/?utm_source=chatgpt.com
+
+[5] VITAS - Der Telefonassistent für Ihr Unternehmen
+
+https://www.vitas.ai/?utm_source=chatgpt.com
+
+[6] WhatsApp Business API
+
+https://360dialog.com/whatsapp-api?utm_source=chatgpt.com
+
+[7] Pricing on the WhatsApp Business Platform
+
+https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing?utm_source=chatgpt.com
+
+[9] [33] Usage limits | Google Calendar
+
+https://developers.google.com/workspace/calendar/api/guides/quota?utm_source=chatgpt.com
+
+[10] Cronofy and the UK leaving the EU | Policies
+
+https://docs.cronofy.com/policies/cronofy-and-brexit/?utm_source=chatgpt.com
+
+[11] Pricing | Cal.com
+
+https://cal.com/pricing?utm_source=chatgpt.com
+
+[12] [35] Enterprise trust in Azure OpenAI Service strengthened with ...
+
+https://azure.microsoft.com/en-us/blog/enterprise-trust-in-azure-openai-service-strengthened-with-data-zones/?utm_source=chatgpt.com
+
+[13] Pricing and plans - Crisp best deals - Crisp
+
+https://crisp.chat/en/pricing/
+
+[14] [36] Pricing | Chatwoot
+
+https://www.chatwoot.com/pricing
+
+[15] [37] n8n Plans and Pricing - n8n.io
+
+https://n8n.io/pricing/?utm_source=chatgpt.com
+
+[16] Pricing Plans
+
+https://www.brevo.com/pricing/?utm_source=chatgpt.com
+
+[17] Pricing & Subscription Packages
+
+https://www.make.com/en/pricing?utm_source=chatgpt.com
+
+[18] [39] Gotenberg: A Docker-based API for PDF conversion
+
+https://gotenberg.dev/?utm_source=chatgpt.com
+
+[19] Preise und Feature-Vergleich für KMUs und Enterprises - FP Sign
+
+https://www.fp-sign.com/de/preise/?utm_source=chatgpt.com
+
+[20] Docusign Pricing | eSignature Plans for Personal & Business
+
+https://ecom.docusign.com/plans-and-pricing/esignature?utm_source=chatgpt.com
+
+[21] [41] [42] Work with review data | Google Business Profile APIs
+
+https://developers.google.com/my-business/content/review-data?utm_source=chatgpt.com
+
+[22] [44] ProvenExpert API
+
+https://developer.provenexpert.com/?utm_source=chatgpt.com
+
+[23] Free Email API for Developers
+
+https://www.brevo.com/features/email-api/?utm_source=chatgpt.com
+
+[25] WhatsApp Business Platform Pricing
+
+https://360dialog.com/pricing?utm_source=chatgpt.com
+
+[26] Inbound Webhook: Kundendaten und dynamische Informationen bei ...
+
+https://www.fonio.ai/de/news-cool-stuff/inbound-webhook-kundendaten-und-dynamische-informationen-bei-anrufen-abrufen?utm_source=chatgpt.com
+
+[27] Rules for trustworthy artificial intelligence in the EU - EUR-Lex
+
+https://eur-lex.europa.eu/EN/legal-content/summary/rules-for-trustworthy-artificial-intelligence-in-the-eu.html?utm_source=chatgpt.com
+
+[28] § 201 StGB - Einzelnorm - Gesetze im Internet
+
+https://www.gesetze-im-internet.de/stgb/__201.html?utm_source=chatgpt.com
+
+[29] Consolidated TEXT: 32016R0679 — EN — 04.05.2016 - EUR-Lex
+
+https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX%3A02016R0679-20160504&utm_source=chatgpt.com
+
+[31] Service messages - Meta for Developers - Facebook
+
+https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/send-messages?utm_source=chatgpt.com
+
+[32] Freebusy: query | Google Calendar
+
+https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query?utm_source=chatgpt.com
+
+[34] Legal tech
+
+https://qdrant.tech/legal-tech/?utm_source=chatgpt.com
+
+[38] Brevo: Email & SMS Marketing, CRM & Automation Platform
+
+https://www.brevo.com/?utm_source=chatgpt.com
+
+[40] The Open Source DocuSign Alternative - Documenso
+
+https://documenso.com/pricing?utm_source=chatgpt.com
+
+[43] Prohibited & restricted content - Maps User Generated ...
+
+https://support.google.com/contributionpolicy/answer/7400114?hl=en&utm_source=chatgpt.com
+
+[45] API-Requests mit Fonio – So funktioniert's Schritt für Schritt!
+
+https://www.fonio.ai/de/news-cool-stuff/api-requests-mit-fonio---so-funktionierts-schritt-fur-schritt?utm_source=chatgpt.com

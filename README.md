@@ -1,47 +1,54 @@
-# BusinessPilot Website
+# BusinessPilot
 
-Marketing-Website für BusinessPilot, gebaut mit [Astro](https://astro.build) als statische Seite (kein Server nötig).
+„Dein digitaler Mitarbeiter“: Website, Dashboard und API in einem Repository.
 
-## Starten
+| Ordner | Inhalt | Stack |
+|---|---|---|
+| `apps/website` | Marketing-Website mit 7 Branchenseiten | Astro (statisch) |
+| `apps/api` | Plattform-Kern: Mandanten, CRM, Termine, Automationen, fonio-Webhooks | Node 22, Fastify, Drizzle, PostgreSQL |
+| `apps/dashboard` | Kunden-Dashboard | React, Vite |
+| `docs/` | API-Vertrag, Technologie-Blueprint, Auslese des alten Prototyps | |
+
+Architektur nach dem Technologie-Blueprint: BusinessPilot besitzt Kundendaten, Terminlogik, Wissen,
+Automationen und ROI. fonio, 360dialog, Google, Microsoft, Brevo und das KI-Modell sitzen hinter
+Provider-Interfaces (`apps/api/src/providers`). Solange keine echten Zugänge eingetragen sind, laufen alle
+Anbieter im Sandbox-Modus: Es wird nichts nach außen gesendet.
+
+## Lokal starten
+
+Voraussetzungen: Node 22, PostgreSQL 16.
 
 ```bash
 npm install
-npm run dev      # lokale Entwicklung auf http://localhost:4321
-npm run build    # statischer Build nach dist/
-npm run preview  # Build lokal ansehen
+cp .env.example .env           # DATABASE_URL anpassen
+npm run db:migrate
+npm run db:seed                # Demo-Werkstatt, Login demo@businesspilot.de / Demo2026!
+npm run dev:api                # http://localhost:3001
+npm run dev:dashboard          # http://localhost:5173
+npm run dev:website            # http://localhost:4321
 ```
 
-`dist/` kann auf jedem statischen Hosting liegen (Netlify, Vercel, Cloudflare Pages, eigener Webserver).
+Tests (brauchen eine leere Datenbank `businesspilot_test`, die bei jedem Lauf neu aufgebaut wird):
 
-## Seiten
+```bash
+npm test
+```
 
-| Route | Inhalt |
-| --- | --- |
-| `/` | Startseite: Hero, Ablauf, Branchenauswahl, 13 Bausteine, Reporting, ROI-Rechner, Preise, Kontakt |
-| `/branchen/[slug]` | 7 Branchenseiten, komplett aus `src/data/industries.ts` erzeugt |
-| `/branche-anfragen` | Formular für Branchen, die (noch) nicht dabei sind |
+## Betrieb
 
-Branchenseiten stehen bewusst **nicht** in der Hauptnavigation. Sie sind über die Branchenkarten, den Footer, interne Links und die Sitemap erreichbar.
+`docker compose up -d --build` startet PostgreSQL und die App (API + Dashboard) auf Port 3001.
+Davor gehört ein TLS-Proxy (z. B. Caddy) für `app.<domain>`. Die Website ist statisch und wird mit
+`npm run build -w @bp/website` gebaut.
 
-## Inhalte pflegen
+## fonio anbinden
 
-- `src/data/industries.ts`: alle Branchentexte (Kundenanfragen, Abläufe, Feature-Beispiele, Beispielrechnung, Paketempfehlung, Reporting, SEO, Rechner-Startwerte)
-- `src/data/features.ts`: die 13 Bausteine mit Standard-Beispielen
-- `src/data/plans.ts`: Pakete und Preise (fest vorgegeben)
-- `src/data/site.ts`: Domain, Kontakt-E-Mail, Formular-Endpunkt
-- `src/styles/global.css`: Design-Tokens (Navy, Grün, Radien, Abstände)
+Im Dashboard unter Integrationen „fonio verbinden“ erzeugt einen API-Schlüssel (wird einmal angezeigt).
+In fonio wird er als `Authorization: Bearer …` eingetragen. Endpunkte siehe `docs/API.md`, Abschnitt
+„Voice webhooks“. Lokal gibt es den Demo-Schlüssel `bp_test_fonio_demo_key`.
 
-## Vor dem Livegang
+## Offen
 
-1. **Branchenfotos** liegen als Pexels-Fotos (800 px) bereit. Für schärfere Darstellung auf Retina-Displays später durch größere Versionen (ab 1600 px Breite) ersetzen:
-   `public/images/branchen/werkstatt.jpg`, `beauty-kosmetik.jpg`, `fitnessstudio.jpg`, `handwerk.jpg`, `handel.jpg`, `friseur.jpg`, `restaurant.jpg`
-   Empfehlung: Querformat 1600 × 1280 px, JPG oder WebP, unter 300 KB.
-2. **Domain und E-Mail** in `src/data/site.ts` und `public/robots.txt` eintragen.
-3. **Formular-Backend**: `FORM_ENDPOINT` in `src/data/site.ts` setzen (z. B. Formspree oder eigenes Backend, nimmt JSON per POST an). Ohne Endpunkt öffnet das Formular das E-Mail-Programm mit vorbereiteter Nachricht.
-4. **Impressum und Datenschutzerklärung** ergänzen und im Footer verlinken (in Deutschland Pflicht).
-
-## Wichtige Inhaltsregeln
-
-- Alle Zahlen im Reporting, in den Beispielrechnungen und im Rechner sind als Beispielwerte gekennzeichnet.
-- Abläufe, die eine externe Software brauchen (Fahrzeugstatus, TÜV-Daten, Check-ins, Warenbestand, Reservierungen), tragen den Hinweis „Mit angebundener …“ bzw. „Bei verfügbarer Integration“.
-- BusinessPilot nennt in den Beispielen nur Preise, die der Betrieb selbst hinterlegt hat.
+- Live-Adapter für fonio-Outbound, 360dialog, Google/Microsoft-Kalender (OAuth), Brevo, Azure OpenAI
+- Webchat-Widget für die Website, Google-Bewertungen über die Business Profile API
+- Embeddings (pgvector) für die Wissenssuche, PDF-Angebote (Gotenberg), E-Signatur
+- Impressum, Datenschutz, echte Domain und Kontaktadresse auf der Website

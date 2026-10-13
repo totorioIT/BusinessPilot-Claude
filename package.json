@@ -1,17 +1,16 @@
 {
-  "name": "businesspilot-website",
-  "type": "module",
-  "version": "0.1.0",
+  "name": "businesspilot",
   "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "check": "astro check"
-  },
-  "dependencies": {
-    "@astrojs/sitemap": "^3.7.4",
-    "@fontsource-variable/inter": "^5.3.0",
-    "astro": "^5.18.2"
+    "dev:api": "npm run dev -w @bp/api",
+    "dev:dashboard": "npm run dev -w @bp/dashboard",
+    "dev:website": "npm run dev -w @bp/website",
+    "build": "npm run build -w @bp/api && npm run build -w @bp/dashboard && npm run build -w @bp/website",
+    "test": "npm test -w @bp/api",
+    "db:migrate": "npm run db:migrate -w @bp/api",
+    "db:seed": "npm run db:seed -w @bp/api",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }
