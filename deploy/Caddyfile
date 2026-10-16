@@ -1,0 +1,6 @@
+# HTTPS in front of the app. Caddy gets the certificate from Let's Encrypt automatically
+# and keeps the Host header, which the API's CSRF check relies on.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3001
+}

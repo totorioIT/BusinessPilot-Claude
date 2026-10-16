@@ -85,7 +85,7 @@ export async function buildApp(opts: AppOptions) {
     }
   });
 
-  app.get('/api/health', async () => ({ ok: true }));
+  app.get('/api/health', async () => ({ ok: true, version: process.env.GIT_COMMIT ?? 'dev' }));
 
   await app.register(authRoutes, { prefix: '/api' });
   await app.register(crmRoutes, { prefix: '/api' });

@@ -14,6 +14,12 @@ const schema = z.object({
     .optional()
     .transform((v) => (v === undefined ? undefined : v === 'true')),
   RUN_JOBS: z.enum(['true', 'false']).default('true'),
+  /** First start on an empty database: create the demo workshop with this owner login. */
+  OWNER_EMAIL: z.string().email().optional(),
+  OWNER_PASSWORD: z.string().min(10).optional(),
+  OWNER_NAME: z.string().optional(),
+  /** Commit the image was built from, shown by /api/health. */
+  GIT_COMMIT: z.string().default('dev'),
 });
 
 export const env = schema.parse(process.env);

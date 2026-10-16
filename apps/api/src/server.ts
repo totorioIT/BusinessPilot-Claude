@@ -1,11 +1,16 @@
 import { buildApp } from './app.js';
 import { createDb } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { bootstrapOwner } from './db/seed.js';
 import { env } from './env.js';
 import { startJobRunner } from './services/automations.js';
 
 await runMigrations(env.DATABASE_URL);
 const { db, pool } = createDb(env.DATABASE_URL);
+if (env.OWNER_EMAIL && env.OWNER_PASSWORD) {
+  const created = await bootstrapOwner(db, { email: env.OWNER_EMAIL, password: env.OWNER_PASSWORD, name: env.OWNER_NAME });
+  if (created) console.log(`Erststart: Demo-Betrieb mit Login ${env.OWNER_EMAIL} angelegt.`);
+}
 const app = await buildApp({
   db,
   publicUrl: env.PUBLIC_URL,

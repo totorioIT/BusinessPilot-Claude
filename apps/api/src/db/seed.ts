@@ -23,10 +23,18 @@ const daysAhead = (d: number, time: string) => {
   return zonedToUtc(localDate(date, TZ), time, TZ);
 };
 
-export async function seed(db: Db) {
+export interface SeedOptions {
+  /** Owner login of the demo workshop. Defaults to the public demo account. */
+  owner?: { email: string; password: string; name?: string };
+  /** Install the well-known demo fonio key. Off on a public server. */
+  demoFonioKey?: boolean;
+}
+
+export async function seed(db: Db, opts: SeedOptions = {}) {
+  const owner = { email: DEMO_EMAIL, password: DEMO_PASSWORD, name: 'Philipp Wiedamann', ...opts.owner };
   const old = await db.select({ id: s.tenants.id }).from(s.tenants).where(inArray(s.tenants.name, ['Kfz-Werkstatt Muster GmbH', 'Beauty Lounge Lena']));
   if (old.length) await db.delete(s.tenants).where(inArray(s.tenants.id, old.map((t) => t.id)));
-  await db.delete(s.users).where(inArray(s.users.email, [DEMO_EMAIL, 'lena@example.de']));
+  await db.delete(s.users).where(inArray(s.users.email, [owner.email, 'lena@example.de']));
 
   const tenantId = newId('wrk');
   await db.insert(s.tenants).values({
@@ -50,7 +58,7 @@ export async function seed(db: Db) {
   });
 
   const userId = newId('usr');
-  await db.insert(s.users).values({ id: userId, email: DEMO_EMAIL, name: 'Philipp Wiedamann', passwordHash: await hashPassword(DEMO_PASSWORD), isPlatformAdmin: true });
+  await db.insert(s.users).values({ id: userId, email: owner.email, name: owner.name ?? owner.email, passwordHash: await hashPassword(owner.password), isPlatformAdmin: true });
   await db.insert(s.memberships).values({ userId, tenantId, role: 'owner' });
 
   const staff = {
@@ -434,7 +442,7 @@ export async function seed(db: Db) {
 
   // Integrations: fonio in sandbox with a fixed demo key, for local testing of the voice endpoints.
   await db.insert(s.integrations).values({ id: newId('int'), tenantId, provider: 'fonio', mode: 'sandbox', status: 'connected' });
-  await db.insert(s.apiKeys).values({ id: sha256(DEMO_FONIO_KEY), tenantId, provider: 'fonio', label: 'Demo-Schlüssel' }).onConflictDoNothing();
+  if (opts.demoFonioKey ?? true) await db.insert(s.apiKeys).values({ id: sha256(DEMO_FONIO_KEY), tenantId, provider: 'fonio', label: 'Demo-Schlüssel' }).onConflictDoNothing();
 
   // A second tenant so the platform admin view has more than one row.
   const t2 = newId('wrk');
@@ -452,6 +460,14 @@ export async function seed(db: Db) {
   await db.insert(s.memberships).values({ userId: u2, tenantId: t2, role: 'owner' });
 
   return { tenantId };
+}
+
+/** Seeds the demo workshop for a real owner, but only into a database without any users. */
+export async function bootstrapOwner(db: Db, owner: { email: string; password: string; name?: string }) {
+  const [existing] = await db.select({ id: s.users.id }).from(s.users).limit(1);
+  if (existing) return false;
+  await seed(db, { owner, demoFonioKey: false });
+  return true;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -1,4 +1,5 @@
-# Production-like setup on one server (e.g. Hetzner, Germany). Put a TLS proxy such as Caddy in front.
+# One server (Germany): Postgres, the app (API + dashboard) and Caddy for HTTPS.
+# deploy/install.sh writes the .env next to this file.
 services:
   db:
     image: postgres:16-alpine
@@ -15,16 +16,39 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-dev}
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://bp:${POSTGRES_PASSWORD}@db:5432/businesspilot
-      PUBLIC_URL: ${PUBLIC_URL:-https://app.businesspilot.de}
+      PUBLIC_URL: https://${DOMAIN:?set DOMAIN in .env}
+      OWNER_EMAIL: ${OWNER_EMAIL:-}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+      OWNER_NAME: ${OWNER_NAME:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/health || exit 1']
+      interval: 10s
+      retries: 12
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN}
     ports:
-      - '127.0.0.1:3001:3001'
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
 
 volumes:
   pgdata:
+  caddy_data:

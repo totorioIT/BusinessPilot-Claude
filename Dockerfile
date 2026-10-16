@@ -12,8 +12,9 @@ COPY apps/dashboard apps/dashboard
 RUN npm run build -w @bp/api && npm run build -w @bp/dashboard
 
 FROM node:22-alpine
+ARG GIT_COMMIT=dev
 WORKDIR /app
-ENV NODE_ENV=production PORT=3001 DASHBOARD_DIST=/app/dashboard
+ENV NODE_ENV=production PORT=3001 DASHBOARD_DIST=/app/dashboard GIT_COMMIT=$GIT_COMMIT
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/dashboard/package.json apps/dashboard/

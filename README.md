@@ -36,8 +36,18 @@ npm test
 
 ## Betrieb
 
-`docker compose up -d --build` startet PostgreSQL und die App (API + Dashboard) auf Port 3001.
-Davor gehört ein TLS-Proxy (z. B. Caddy) für `app.<domain>`. Die Website ist statisch und wird mit
+Ein frischer Ubuntu-24.04-Server (beliebiger Anbieter) wird mit einem Befehl eingerichtet:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/totorioIT/BusinessPilot-Claude/main/deploy/install.sh | sudo bash
+```
+
+Das Skript fragt nach Login-E-Mail und Passwort des Inhabers, installiert Docker und startet
+PostgreSQL, die App (API + Dashboard) und Caddy für HTTPS (`docker-compose.yml`). Ohne `DOMAIN=…`
+läuft die App unter `<ip>.sslip.io`. Beim Erststart auf leerer Datenbank legt die App den
+Demo-Betrieb mit diesem Login an, ohne den öffentlichen Demo-Zugang und ohne Demo-fonio-Schlüssel.
+Ein systemd-Timer holt alle 5 Minuten neue Commits von `main` und baut neu (`deploy/update.sh`);
+`/api/health` zeigt den laufenden Commit. Die Website ist statisch und wird mit
 `npm run build -w @bp/website` gebaut.
 
 ## fonio anbinden
