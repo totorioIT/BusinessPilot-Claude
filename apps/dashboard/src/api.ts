@@ -361,6 +361,14 @@ export interface Integration {
   webhookUrl: string | null;
 }
 
+export interface WebhookLogEntry {
+  at: string;
+  path: string;
+  status: number;
+  fields: Record<string, string>;
+  note: string | null;
+}
+
 export interface AdminTenants {
   stats: { tenants: number; users: number; active: number };
   items: {

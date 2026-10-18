@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Link2, Unlink } from 'lucide-react';
-import { api, type Integration } from '../api';
+import { KeyRound, Link2, RefreshCw, Unlink } from 'lucide-react';
+import { api, type Integration, type WebhookLogEntry } from '../api';
 import { CopyButton } from '../components/CopyButton';
 import { Badge, EmptyState, ErrorState, FormError, PageHeader, Skeleton, Spinner } from '../components/ui';
 
@@ -71,6 +71,77 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
   );
 }
 
+const timeFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+function LogRow({ e }: { e: WebhookLogEntry }) {
+  const fields = Object.entries(e.fields);
+  return (
+    <tr>
+      <td className="mono">{timeFmt.format(new Date(e.at))}</td>
+      <td className="mono">{e.path}</td>
+      <td>
+        <Badge tone={e.status < 300 ? 'green' : 'red'}>{e.status}</Badge>
+      </td>
+      <td>
+        {e.note && <p className="small">{e.note}</p>}
+        {fields.length === 0 ? (
+          <span className="muted small">Kein Inhalt</span>
+        ) : (
+          <ul className="small webhook-fields">
+            {fields.map(([k, v]) => (
+              <li key={k}>
+                <span className="mono">{k}</span>: {v}
+              </li>
+            ))}
+          </ul>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/** The calls fonio made recently, so setup mistakes in the assistant become visible. */
+function FonioLog() {
+  const q = useQuery({
+    queryKey: ['fonio-log'],
+    queryFn: () => api.get<{ entries: WebhookLogEntry[]; unauthenticated: WebhookLogEntry[] }>('/integrations/fonio/log'),
+    refetchInterval: 10_000,
+  });
+  const rows = q.data ? [...q.data.entries, ...q.data.unauthenticated].sort((a, b) => b.at.localeCompare(a.at)) : [];
+  return (
+    <section className="card card--pad stack" aria-labelledby="fonio-log-h">
+      <header className="integration__head">
+        <h2 id="fonio-log-h">Letzte Aufrufe von fonio</h2>
+        <button type="button" className="btn btn--outline btn--sm" onClick={() => q.refetch()} disabled={q.isFetching}>
+          {q.isFetching ? <Spinner /> : <RefreshCw aria-hidden="true" />} Aktualisieren
+        </button>
+      </header>
+      <p className="muted small">Zeigt, was fonio bei Anrufen an BusinessPilot geschickt hat. Nach einem Neustart des Servers ist die Liste leer.</p>
+      {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
+      {q.data && rows.length === 0 && <p className="small">Noch keine Aufrufe seit dem letzten Neustart.</p>}
+      {rows.length > 0 && (
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Zeit</th>
+                <th>Adresse</th>
+                <th>Status</th>
+                <th>Inhalt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((e, i) => (
+                <LogRow key={`${e.at}-${i}`} e={e} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function IntegrationsPage() {
   const q = useQuery({ queryKey: ['integrations'], queryFn: () => api.get<Integration[]>('/integrations') });
   const [key, setKey] = useState<{ provider: string; key: string } | null>(null);
@@ -111,6 +182,7 @@ export function IntegrationsPage() {
           ))}
         </div>
       )}
+      {q.data?.some((i) => i.provider === 'fonio' && i.status === 'connected') && <FonioLog />}
     </div>
   );
 }

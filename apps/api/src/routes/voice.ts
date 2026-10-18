@@ -24,6 +24,7 @@ import { providersFor } from '../providers/registry.js';
 import { automationHooks } from '../services/automations.js';
 import { answerQuestion } from '../services/knowledge.js';
 import { bookSlot, findServiceType, searchAvailability } from '../services/scheduling.js';
+import { logWebhook } from '../services/webhook-log.js';
 import { nextCustomerNumber } from './crm.js';
 
 // fonio webhook and tool endpoints (blueprint "Integrationsflows und Payloads").
@@ -32,6 +33,7 @@ import { nextCustomerNumber } from './crm.js';
 
 const AI = { type: 'ai' as const, name: null };
 const SESSION_MINUTES = 60;
+const POST_CALL_FALLBACK_MINUTES = 120;
 
 const str = z
   .union([z.string(), z.number()])
@@ -57,6 +59,7 @@ async function tenantFromKey(app: FastifyInstance, req: FastifyRequest) {
     .where(and(eq(apiKeys.id, sha256(key)), eq(apiKeys.provider, 'fonio'), isNull(apiKeys.revokedAt)));
   if (!row) throw new HttpError(401, 'unauthorized', 'Ungültiger API-Schlüssel.');
   const [tenant] = await app.db.select().from(tenants).where(eq(tenants.id, row.tenantId));
+  (req as FastifyRequest & { voiceTenantId?: string }).voiceTenantId = tenant.id;
   return tenant;
 }
 
@@ -81,6 +84,22 @@ const timeOfDayFilter = (tod: string | null, start: Date, tz: string) => {
 
 export async function voiceRoutes(app: FastifyInstance) {
   const db = app.db;
+
+  // Every call fonio makes is listed on the integrations page, so a misconfigured assistant
+  // (missing header, empty variable) shows up there instead of failing silently.
+  app.addHook('onSend', async (req, reply, payload) => {
+    let note: string | null = null;
+    if (reply.statusCode >= 400 && typeof payload === 'string') {
+      try {
+        note = (JSON.parse(payload) as { message?: string }).message ?? null;
+      } catch {
+        note = null;
+      }
+    }
+    const tenantId = (req as FastifyRequest & { voiceTenantId?: string }).voiceTenantId ?? null;
+    logWebhook(tenantId, { path: req.url.replace(/^\/api\/voice/, '').split('?')[0], status: reply.statusCode, body: req.body, note: note ?? (req as FastifyRequest & { voiceNote?: string }).voiceNote ?? null });
+    return payload;
+  });
 
   app.post('/fonio/inbound', async (req) => {
     const tenant = await tenantFromKey(app, req);
@@ -396,9 +415,24 @@ export async function voiceRoutes(app: FastifyInstance) {
       req.body,
     );
     // Post-call may arrive after the session expired, so look it up without the expiry check.
-    const [session] = body.session_token
+    let [session] = body.session_token
       ? await db.select().from(voiceSessions).where(and(eq(voiceSessions.id, sha256(body.session_token)), eq(voiceSessions.tenantId, tenant.id)))
       : [];
+    if (!session) {
+      // fonio doesn't always hand the inbound variables on to the post-call request. Then the
+      // call belongs to the newest recent session without a call record, preferring the caller's number.
+      const from = (body as Record<string, unknown>).fromNumber ?? (body as Record<string, unknown>).from_number;
+      const candidates = await db
+        .select({ session: voiceSessions })
+        .from(voiceSessions)
+        .leftJoin(calls, eq(calls.conversationId, voiceSessions.conversationId))
+        .where(and(eq(voiceSessions.tenantId, tenant.id), isNull(calls.id), gt(voiceSessions.createdAt, addMinutes(new Date(), -POST_CALL_FALLBACK_MINUTES))))
+        .orderBy(desc(voiceSessions.createdAt))
+        .limit(20);
+      const key = typeof from === 'string' && phoneKey(from).length >= 6 ? phoneKey(from) : null;
+      session = (key && candidates.find((c) => c.session.fromNumber && phoneKey(c.session.fromNumber) === key)?.session) || candidates[0]?.session;
+      if (session) (req as FastifyRequest & { voiceNote?: string }).voiceNote = 'Ohne gültiges session_token dem letzten offenen Anruf zugeordnet.';
+    }
     if (!session?.conversationId) throw new HttpError(404, 'not_found', 'Gespräch nicht gefunden.');
 
     const transcript = Array.isArray(body.transcript)

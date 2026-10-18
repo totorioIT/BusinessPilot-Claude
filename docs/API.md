@@ -139,4 +139,6 @@ Authenticated with `Authorization: Bearer <tenant api key>`; no cookie.
 | POST | /voice/tools/service-request | create task / lead |
 | POST | /voice/tools/callback | callback task |
 | POST | /voice/tools/knowledge/query | answer from knowledge base |
-| POST | /voice/fonio/post-call | transcript, outcome, summary |
+| POST | /voice/fonio/post-call | transcript, outcome, summary; without a valid `session_token` it goes to the newest call of the last 2 h that has no call record yet (matching `fromNumber` first) |
+
+`GET /integrations/fonio/log` (owner/admin, cookie) lists the last 20 fonio calls since the server started: path, status, field previews, error message. Calls with a missing or wrong key are included for platform admins.

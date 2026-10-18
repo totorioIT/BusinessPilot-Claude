@@ -25,6 +25,7 @@ import { PROVIDERS } from '../providers/registry.js';
 import { canEncrypt } from '../lib/secretbox.js';
 import { clearAiSettings, getAiSettings, saveAiSettings, storedToken } from '../services/ai-settings.js';
 import { answerQuestion } from '../services/knowledge.js';
+import { webhookLog } from '../services/webhook-log.js';
 import { analytics, dashboardKpis } from '../services/analytics.js';
 import { AUTOMATION_TEMPLATES, templateByKey } from '../services/automation-templates.js';
 
@@ -306,6 +307,12 @@ export async function systemRoutes(app: FastifyInstance) {
   };
 
   app.get('/integrations', async (req) => integrationList(auth(req).tenantId));
+
+  // What fonio sent recently; calls with a missing or wrong key are only shown to platform admins.
+  app.get('/integrations/fonio/log', async (req) => {
+    const a = requireRole(req, ['owner', 'admin']);
+    return webhookLog(a.tenantId, a.isPlatformAdmin);
+  });
 
   app.post('/integrations/:provider/connect', async (req) => {
     const a = requireRole(req, ['owner', 'admin']);

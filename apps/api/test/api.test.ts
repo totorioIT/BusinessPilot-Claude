@@ -189,6 +189,22 @@ describe('fonio voice flow', () => {
     assert.equal(customers.body[0].phone, '+49 157 0000001');
   });
 
+  it('files the post-call under the latest open call when fonio sends no usable session token', async () => {
+    const inbound = await t.voice('/fonio/inbound', { fromNumber: '+49 160 5550001' });
+    const post = await t.voice('/fonio/post-call', { session_token: '{{bp_session_token}}', summary: 'Ohne Token zugeordnet', transcript: 'Kunde: Hallo' });
+    assert.equal(post.status, 200);
+    const list = await t.api('GET', '/conversations?channel=phone');
+    const conv = list.body.items.find((c: { preview: string }) => c.preview === 'Ohne Token zugeordnet');
+    assert.ok(conv, 'the call is filed although the token was not filled in');
+    assert.ok(inbound.body.bp_session_token);
+
+    const log = await t.api('GET', '/integrations/fonio/log');
+    const entry = log.body.entries.find((e: { path: string }) => e.path === '/fonio/post-call');
+    assert.match(entry.note, /letzten offenen Anruf/);
+    assert.equal(entry.fields.summary, 'Ohne Token zugeordnet');
+    assert.ok(log.body.unauthenticated.some((e: { status: number }) => e.status === 401), 'calls with a wrong key are listed for platform admins');
+  });
+
   it('answers from the knowledge base', async () => {
     const res = await t.voice('/tools/knowledge/query', { question: 'Wann habt ihr samstags offen?' });
     assert.match(res.body.answer, /samstags/);
