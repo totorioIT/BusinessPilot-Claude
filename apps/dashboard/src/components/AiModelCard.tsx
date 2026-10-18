@@ -82,7 +82,9 @@ export function AiModelCard() {
             <input
               id="ai-token"
               type="password"
-              autoComplete="off"
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
               placeholder={s.tokenHint ? `Gespeichert: ${s.tokenHint}` : 'Token aus dem IONOS Token Manager einfügen'}
               value={token}
               onChange={(e) => {
