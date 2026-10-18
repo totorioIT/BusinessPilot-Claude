@@ -92,6 +92,9 @@ export function AiModelCard() {
                 setSaved(false);
               }}
             />
+            {/^[0-9a-f-]{36}$/i.test(token.trim()) && (
+              <p className="form-error" role="alert">Das sieht nach der Token-ID aus. Gebraucht wird der lange Token (beginnt mit „eyJ“), den IONOS nur einmal beim Erstellen anzeigt.</p>
+            )}
             <p className="field__hint">
               Wird verschlüsselt auf dem Server gespeichert und hier nie wieder angezeigt.
               {s.updatedAt && ` Zuletzt geändert am ${formatDate(s.updatedAt)}.`} IONOS-Token laufen ab; vor Ablauf hier einen neuen eintragen.
