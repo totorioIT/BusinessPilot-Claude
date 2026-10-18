@@ -15,12 +15,16 @@ import {
   tenants,
   users,
 } from '../db/schema.js';
-import { forbidden, notFound } from '../lib/errors.js';
+import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { newToken, sha256 } from '../lib/crypto.js';
 import { recordEvent } from '../lib/events.js';
 import { auth, optionalString, parse, requireRole, userActor } from '../lib/http.js';
 import { newId } from '../lib/ids.js';
+import { IONOS_BASE_URL, listModels, openAiCompatibleLlm } from '../providers/openai-compatible.js';
 import { PROVIDERS } from '../providers/registry.js';
+import { canEncrypt } from '../lib/secretbox.js';
+import { clearAiSettings, getAiSettings, saveAiSettings, storedToken } from '../services/ai-settings.js';
+import { answerQuestion } from '../services/knowledge.js';
 import { analytics, dashboardKpis } from '../services/analytics.js';
 import { AUTOMATION_TEMPLATES, templateByKey } from '../services/automation-templates.js';
 
@@ -372,5 +376,82 @@ export async function systemRoutes(app: FastifyInstance) {
       stats: { tenants: items.length, users: items.reduce((s, i) => s + i.users, 0), active: items.filter((i) => i.status === 'active').length },
       items,
     };
+  });
+
+  // Platform admin: the LLM account all tenants share. The token is write-only from here on;
+  // responses only ever show its last four characters.
+  const platformAdmin = (req: Parameters<typeof auth>[0]) => {
+    const a = auth(req);
+    if (!a.isPlatformAdmin) throw forbidden();
+    return a;
+  };
+  const aiConnection = z.object({
+    baseUrl: z.string().trim().url().default(IONOS_BASE_URL),
+    token: z.string().trim().min(20).max(4000).optional(),
+  });
+  const tokenFor = async (token: string | undefined) => {
+    const t = token ?? (await storedToken(db));
+    if (!t) throw badRequest('Bitte zuerst den Token eintragen.');
+    return t;
+  };
+  const providerError = (err: unknown) => badRequest(err instanceof Error ? err.message : 'Der KI-Anbieter ist nicht erreichbar.', 'llm_error');
+
+  app.get('/admin/ai', async (req) => {
+    platformAdmin(req);
+    return { ...(await getAiSettings(db)), canStoreSecrets: canEncrypt() };
+  });
+
+  app.post('/admin/ai/models', async (req) => {
+    platformAdmin(req);
+    const body = parse(aiConnection, req.body ?? {});
+    try {
+      return { models: await listModels({ baseUrl: body.baseUrl, token: await tokenFor(body.token) }) };
+    } catch (err) {
+      if (err instanceof Error && 'statusCode' in err) throw err;
+      throw providerError(err);
+    }
+  });
+
+  app.put('/admin/ai', async (req) => {
+    const a = platformAdmin(req);
+    if (!canEncrypt()) throw badRequest('Auf dem Server fehlt APP_SECRET. Das Update-Skript legt ihn beim nächsten Durchlauf an.', 'no_secret');
+    const body = parse(aiConnection.extend({ model: z.string().trim().min(1).max(200) }), req.body);
+    const token = await tokenFor(body.token);
+    try {
+      await openAiCompatibleLlm({ baseUrl: body.baseUrl, token, model: body.model, timeoutMs: 30_000 }).complete({
+        messages: [{ role: 'user', content: 'Antworte nur mit: OK' }],
+        maxTokens: 5,
+      });
+    } catch (err) {
+      throw providerError(err);
+    }
+    await saveAiSettings(db, { baseUrl: body.baseUrl, model: body.model, token });
+    await recordEvent(db, { tenantId: a.tenantId, type: 'integration.connected', actor: userActor(a), summary: `KI-Modell ${body.model} eingerichtet` });
+    return { ...(await getAiSettings(db)), canStoreSecrets: true };
+  });
+
+  app.delete('/admin/ai', async (req) => {
+    const a = platformAdmin(req);
+    await clearAiSettings(db);
+    await recordEvent(db, { tenantId: a.tenantId, type: 'integration.disconnected', actor: userActor(a), summary: 'KI-Modell entfernt, Antworten wieder aus dem Wissen' });
+    return { ...(await getAiSettings(db)), canStoreSecrets: canEncrypt() };
+  });
+
+  // Ask the knowledge base of the admin's own business with a chosen model, to compare models
+  // on real questions before switching.
+  app.post('/admin/ai/test', async (req) => {
+    const a = platformAdmin(req);
+    const body = parse(z.object({ question: z.string().trim().min(2).max(500), model: z.string().trim().min(1).max(200).optional() }), req.body);
+    const settings = await getAiSettings(db);
+    const model = body.model ?? settings.model;
+    if (!model) throw badRequest('Bitte zuerst ein Modell auswählen und speichern.');
+    const llm = openAiCompatibleLlm({ baseUrl: settings.baseUrl, model, token: await tokenFor(undefined) });
+    const started = Date.now();
+    try {
+      const result = await answerQuestion(db, llm, a.tenantId, body.question);
+      return { model, answer: result.answer, ms: Date.now() - started, sources: result.sources.map((s) => ({ id: s.id, title: s.title })) };
+    } catch (err) {
+      throw providerError(err);
+    }
   });
 }

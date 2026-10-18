@@ -8,6 +8,13 @@
       "when": 1791893124411,
       "tag": "0000_clumsy_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792332495005,
+      "tag": "0001_platform_settings",
+      "breakpoints": true
     }
   ]
 }

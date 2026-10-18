@@ -30,6 +30,7 @@ services:
       OWNER_EMAIL: ${OWNER_EMAIL:-}
       OWNER_PASSWORD: ${OWNER_PASSWORD:-}
       OWNER_NAME: ${OWNER_NAME:-}
+      APP_SECRET: ${APP_SECRET:-}
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/api/health || exit 1']
       interval: 10s

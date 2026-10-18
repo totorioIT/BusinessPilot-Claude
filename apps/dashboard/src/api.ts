@@ -375,3 +375,19 @@ export interface AdminTenants {
     createdAt: string;
   }[];
 }
+
+export interface AiSettings {
+  configured: boolean;
+  baseUrl: string;
+  model: string | null;
+  tokenHint: string | null;
+  updatedAt: string | null;
+  canStoreSecrets: boolean;
+}
+
+export interface AiTestResult {
+  model: string;
+  answer: string;
+  ms: number;
+  sources: { id: string; title: string }[];
+}

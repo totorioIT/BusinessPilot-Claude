@@ -8,6 +8,12 @@ main() {
   exec 9>/run/businesspilot-update.lock
   flock -n 9 || exit 0
 
+  # Servers installed before APP_SECRET existed get one now; the containers must restart to see it.
+  if ! grep -q '^APP_SECRET=' .env; then
+    echo "APP_SECRET=$(openssl rand -hex 32)" >> .env
+    FORCE=1
+  fi
+
   git fetch -q origin main
   if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] && [ -z "${FORCE:-}" ]; then exit 0; fi
 

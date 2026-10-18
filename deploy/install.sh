@@ -57,6 +57,7 @@ main() {
   cat > .env <<EOF
 DOMAIN=$DOMAIN
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
+APP_SECRET=$(openssl rand -hex 32)
 GIT_COMMIT=$(git rev-parse --short HEAD)
 OWNER_EMAIL=$OWNER_EMAIL
 OWNER_NAME='$OWNER_NAME'

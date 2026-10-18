@@ -432,3 +432,10 @@ export const jobs = pgTable(
   },
   (t) => [index('jobs_due').on(t.status, t.runAt), uniqueIndex('jobs_tenant_dedupe').on(t.tenantId, t.dedupeKey)],
 );
+
+/** Settings that belong to the whole platform rather than one tenant, e.g. the LLM account. */
+export const platformSettings = pgTable('platform_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<Record<string, string>>().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

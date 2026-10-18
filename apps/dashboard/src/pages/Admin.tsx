@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Building2, Users } from 'lucide-react';
 import { api, type AdminTenants } from '../api';
+import { AiModelCard } from '../components/AiModelCard';
 import { Badge, EmptyState, ErrorState, PageHeader, Skeleton, SkeletonTiles, StatTile } from '../components/ui';
 import { formatDate, formatNumber } from '../lib/format';
 
@@ -16,7 +17,8 @@ export function AdminPage() {
   const q = useQuery({ queryKey: ['admin', 'tenants'], queryFn: () => api.get<AdminTenants>('/admin/tenants') });
   return (
     <div className="stack-lg">
-      <PageHeader title="Plattform-Admin" subtitle="Übersicht über alle Mandanten der Plattform." />
+      <PageHeader title="Plattform-Admin" subtitle="Einstellungen für die ganze Plattform und Übersicht über alle Mandanten." />
+      <AiModelCard />
       {q.isPending && <SkeletonTiles count={3} />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && (

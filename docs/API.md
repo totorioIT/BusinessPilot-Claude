@@ -119,6 +119,15 @@ Providers: `fonio`, `whatsapp_360dialog`, `google_calendar`, `microsoft_365`, `g
 ## Platform admin (users with isPlatformAdmin)
 `GET /admin/tenants` → `{ stats:{tenants, users, active}, items:[{id, name, industry, plan, status, users, calls, chats, createdAt}] }`
 
+LLM account shared by all tenants (OpenAI-compatible, default IONOS AI Model Hub). The token is write-only; responses carry only `tokenHint` (last four characters).
+| Method | Path | Body → Response |
+|---|---|---|
+| GET | /admin/ai | → `{configured, baseUrl, model, tokenHint, updatedAt, canStoreSecrets}` |
+| POST | /admin/ai/models | `{baseUrl?, token?}` (stored token if omitted) → `{models:[id]}` |
+| PUT | /admin/ai | `{baseUrl?, token?, model}`; test call first, 400 `llm_error` if it fails, 400 `no_secret` without APP_SECRET |
+| DELETE | /admin/ai | back to answers from the knowledge base |
+| POST | /admin/ai/test | `{question, model?}` → `{model, answer, ms, sources}` against the admin's own tenant knowledge |
+
 ## Voice webhooks (fonio)
 Authenticated with `Authorization: Bearer <tenant api key>`; no cookie.
 | Method | Path | Purpose |

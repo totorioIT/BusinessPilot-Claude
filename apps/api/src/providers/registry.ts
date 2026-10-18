@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { DbOrTx } from '../db/client.js';
 import { integrations } from '../db/schema.js';
+import { liveLlm } from '../services/ai-settings.js';
 import { sandboxCalendar, sandboxEmail, sandboxLlm, sandboxMessaging, sandboxVoice } from './sandbox.js';
 import type { CalendarProvider, EmailProvider, LlmProvider, MessagingProvider, ProviderKey, VoiceProvider } from './types.js';
 
@@ -19,7 +20,7 @@ export const PROVIDERS: ProviderInfo[] = [
   { provider: 'microsoft_365', name: 'Microsoft 365 / Outlook', description: 'Outlook-Kalender über Microsoft Graph.', category: 'calendar', hasWebhook: false },
   { provider: 'google_business', name: 'Google Unternehmensprofil', description: 'Bewertungen abrufen und beantworten.', category: 'reviews', hasWebhook: false },
   { provider: 'brevo', name: 'Brevo (E-Mail & SMS)', description: 'Versand von E-Mails und SMS aus der EU.', category: 'email', hasWebhook: false },
-  { provider: 'openai', name: 'KI-Modell (Azure OpenAI EU)', description: 'Sprachmodell für Antworten und Zusammenfassungen, Verarbeitung in der EU.', category: 'ai', hasWebhook: false },
+  { provider: 'openai', name: 'KI-Modell (IONOS, Deutschland)', description: 'Sprachmodell für Antworten und Zusammenfassungen, Verarbeitung in deutschen Rechenzentren. Wird zentral unter Plattform-Admin eingerichtet.', category: 'ai', hasWebhook: false },
 ];
 
 export type Providers = {
@@ -31,8 +32,8 @@ export type Providers = {
 };
 
 /**
- * Resolves the providers for one tenant. Live adapters are added here once the API accounts
- * exist; until then every tenant gets the sandbox implementations, whatever the integration row says.
+ * Resolves the providers for one tenant. The LLM is live as soon as a platform admin has saved
+ * a model; the other live adapters are added here once their API accounts exist.
  */
 export async function providersFor(db: DbOrTx, tenantId: string): Promise<Providers> {
   const rows = await db.select().from(integrations).where(and(eq(integrations.tenantId, tenantId), eq(integrations.mode, 'live')));
@@ -40,5 +41,20 @@ export async function providersFor(db: DbOrTx, tenantId: string): Promise<Provid
     // Live adapters are not implemented yet; fail loudly instead of silently pretending.
     throw new Error(`Live-Modus für ${rows.map((r) => r.provider).join(', ')} ist noch nicht implementiert.`);
   }
-  return { messaging: sandboxMessaging, email: sandboxEmail, calendar: sandboxCalendar, llm: sandboxLlm, voice: sandboxVoice };
+  const live = await liveLlm(db);
+  return { messaging: sandboxMessaging, email: sandboxEmail, calendar: sandboxCalendar, llm: live ? withFallback(live) : sandboxLlm, voice: sandboxVoice };
+}
+
+/** A customer should get an answer even when the model is down, so fall back to the knowledge text. */
+function withFallback(llm: LlmProvider): LlmProvider {
+  return {
+    async complete(input) {
+      try {
+        return await llm.complete(input);
+      } catch (err) {
+        console.error('KI-Modell nicht erreichbar, Antwort aus dem Wissen:', err);
+        return sandboxLlm.complete(input);
+      }
+    },
+  };
 }

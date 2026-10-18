@@ -18,9 +18,13 @@ const schema = z.object({
   OWNER_EMAIL: z.string().email().optional(),
   OWNER_PASSWORD: z.string().min(10).optional(),
   OWNER_NAME: z.string().optional(),
+  /** Encrypts stored third-party tokens (lib/secretbox.ts); at least 32 characters. */
+  APP_SECRET: z.string().min(32).optional(),
   /** Commit the image was built from, shown by /api/health. */
   GIT_COMMIT: z.string().default('dev'),
 });
 
-export const env = schema.parse(process.env);
+// docker-compose passes unset variables as empty strings (e.g. OWNER_PASSWORD after the first
+// start); treat those as missing instead of failing validation.
+export const env = schema.parse(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== '')));
 export type Env = typeof env;
