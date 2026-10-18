@@ -64,6 +64,7 @@ test('platform admin connects the LLM; the token is stored encrypted and never r
   assert.equal(answer.status, 200);
   assert.equal(answer.body.answer, 'Wir haben Mo–Fr von 8 bis 18 Uhr geöffnet.');
   assert.match(requests.at(-1)!.body.messages[0].content, /WISSEN/);
+  assert.match(requests.at(-1)!.body.messages[0].content, /Öffnungszeiten: Montag: \d\d:\d\d–\d\d:\d\d Uhr/, 'opening hours from the settings go along');
 });
 
 test('customer replies use the live model and fall back to the knowledge text when it is down', async () => {

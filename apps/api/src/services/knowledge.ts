@@ -36,6 +36,18 @@ export async function searchKnowledge(db: DbOrTx, tenantId: string, question: st
     .slice(0, limit);
 }
 
+const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+
+function businessFacts(t: typeof tenants.$inferSelect): string {
+  const hours = DAYS.map((name, i) => {
+    const h = t.businessHours.find((x) => x.day === i + 1);
+    return `${name}: ${h ? `${h.open}–${h.close} Uhr` : 'geschlossen'}`;
+  });
+  return [`Name: ${t.name}`, t.address && `Adresse: ${t.address}`, t.phone && `Telefon: ${t.phone}`, `Öffnungszeiten: ${hours.join(', ')}`]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export type KnowledgeAnswer = {
   answer: string;
   confidence: number;
@@ -48,8 +60,11 @@ export async function answerQuestion(db: DbOrTx, llm: LlmProvider, tenantId: str
   const confidence = hits[0]?.score ?? 0;
   const system =
     `Du bist ${tenant.aiSettings.name}, der digitale Mitarbeiter von ${tenant.name}. ` +
-    `Antworte freundlich, kurz und nur mit Informationen aus dem WISSEN. Nenne keine Preise, die nicht im WISSEN stehen. ` +
-    `Wenn das WISSEN die Frage nicht beantwortet, sage, dass ein Mitarbeiter sich meldet.\nWISSEN:\n` +
+    `Antworte freundlich, kurz und nur mit Informationen aus BETRIEB und WISSEN. Nenne keine Preise, die nicht im WISSEN stehen. ` +
+    `Wenn BETRIEB und WISSEN die Frage nicht beantworten, sage, dass ein Mitarbeiter sich meldet.\n` +
+    // Opening hours and contact details live in the settings, not in knowledge entries, but
+    // customers ask for them constantly, so every answer gets them.
+    `BETRIEB:\n${businessFacts(tenant)}\nWISSEN:\n` +
     hits.map((h) => h.content).join('\n');
   const answer = await llm.complete({ messages: [{ role: 'system', content: system }, { role: 'user', content: question }] });
   return {
