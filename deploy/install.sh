@@ -67,7 +67,7 @@ EOF
   docker compose up -d --build
   healthy=
   for _ in $(seq 60); do
-    if docker compose exec -T app wget -qO- http://localhost:3001/api/health >/dev/null 2>&1; then healthy=1; break; fi
+    if docker compose exec -T app wget -qO- http://127.0.0.1:3001/api/health >/dev/null 2>&1; then healthy=1; break; fi
     sleep 5
   done
   if [ -n "$healthy" ]; then

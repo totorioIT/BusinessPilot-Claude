@@ -16,6 +16,19 @@ main() {
   echo "Aktualisiere auf $(git log -1 --format='%h %s')"
   docker compose up -d --build --remove-orphans
   docker image prune -f >/dev/null
+
+  # An install whose first health check failed leaves the owner password in .env; drop it
+  # once the app answers, since the login lives in the database by then.
+  if grep -q '^OWNER_PASSWORD=' .env; then
+    for _ in $(seq 30); do
+      if docker compose exec -T app wget -qO- http://127.0.0.1:3001/api/health >/dev/null 2>&1; then
+        sed -i '/^OWNER_PASSWORD=/d' .env
+        docker compose up -d
+        break
+      fi
+      sleep 5
+    done
+  fi
 }
 
 main "$@"
