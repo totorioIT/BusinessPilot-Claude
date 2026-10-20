@@ -359,6 +359,8 @@ export interface Integration {
   status: 'connected' | 'disconnected' | 'error';
   lastError: string | null;
   webhookUrl: string | null;
+  /** Short note about the live connection, e.g. which key is stored. */
+  detail: string | null;
 }
 
 export interface WebhookLogEntry {

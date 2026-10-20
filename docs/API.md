@@ -111,9 +111,10 @@ All numbers come from the same event set, so tiles, bars and summary always agre
 `GET /settings/team` → `{ users:[{id,name,email,role}], staff:[{id,name,skills,active}] }`
 
 ## Integrations
-`GET /integrations` → `[{provider, name, description, category, mode:'sandbox'|'live', status:'connected'|'disconnected'|'error', lastError, webhookUrl|null}]`
-`POST /integrations/:provider/connect` `{config?}` → integration item, plus `apiKey` (string) for `fonio` only: the webhook bearer key, returned exactly once. The UI must show it with a copy button and a warning that it will not be shown again.
+`GET /integrations` → `[{provider, name, description, category, mode:'sandbox'|'live', status:'connected'|'disconnected'|'error', lastError, webhookUrl|null, detail|null}]`. `openai` is managed by the platform admin and shows as connected once a model is saved.
+`POST /integrations/:provider/connect` `{apiKey?, testAccount?}` → integration item, plus `apiKey` (string) for `fonio` only: the webhook bearer key, returned exactly once. The UI must show it with a copy button and a warning that it will not be shown again.
 `POST /integrations/:provider/disconnect` → integration item
+WhatsApp goes live with `POST /integrations/whatsapp_360dialog/connect {apiKey, testAccount}`: the server registers `/api/webhooks/whatsapp_360dialog/<secret>` with 360dialog (400 `provider_rejected` if 360dialog refuses the key), stores the key encrypted and from then on sends through 360dialog. Incoming messages land in the inbox; the AI answers per the autonomy setting (assist: hand to staff; semi: answer when the knowledge clearly matches, otherwise a holding reply and hand-off; autopilot: always answer). The first AI message in a conversation says that an AI is writing.
 Providers: `fonio`, `whatsapp_360dialog`, `google_calendar`, `microsoft_365`, `google_business`, `brevo`, `openai`.
 
 ## Platform admin (users with isPlatformAdmin)

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Link2, RefreshCw, Unlink } from 'lucide-react';
 import { api, type Integration, type WebhookLogEntry } from '../api';
@@ -19,6 +19,9 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
     },
   });
   const connected = it.status === 'connected';
+  // WhatsApp goes live with the tenant's own 360dialog key; the platform-wide model is set up by the admin.
+  const needsKey = it.provider === 'whatsapp_360dialog' && it.mode !== 'live';
+  const platformManaged = it.provider === 'openai';
   return (
     <article className="card card--pad integration">
       <header className="integration__head">
@@ -32,6 +35,7 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
       </header>
       <p className="muted small">{it.description}</p>
       {it.category && <p className="small muted">Kategorie: {it.category}</p>}
+      {it.detail && <p className="small">{it.detail}</p>}
       {it.lastError && (
         <p className="form-error" role="alert">
           Letzter Fehler: {it.lastError}
@@ -49,25 +53,73 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
         </div>
       )}
       <FormError error={m.error} />
-      <div className="integration__actions">
-        {connected ? (
-          <button
-            type="button"
-            className="btn btn--outline btn--sm"
-            disabled={m.isPending}
-            onClick={() => {
-              if (window.confirm(`${it.name} wirklich trennen?`)) m.mutate('disconnect');
-            }}
-          >
-            {m.isPending ? <Spinner /> : <Unlink aria-hidden="true" />} Trennen
-          </button>
-        ) : (
-          <button type="button" className="btn btn--primary btn--sm" disabled={m.isPending} onClick={() => m.mutate('connect')}>
-            {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} {it.status === 'error' ? 'Erneut verbinden' : 'Verbinden'}
-          </button>
-        )}
-      </div>
+      {needsKey && <Dialog360KeyForm />}
+      {!platformManaged && !needsKey && (
+        <div className="integration__actions">
+          {connected ? (
+            <button
+              type="button"
+              className="btn btn--outline btn--sm"
+              disabled={m.isPending}
+              onClick={() => {
+                if (window.confirm(`${it.name} wirklich trennen?`)) m.mutate('disconnect');
+              }}
+            >
+              {m.isPending ? <Spinner /> : <Unlink aria-hidden="true" />} Trennen
+            </button>
+          ) : (
+            <button type="button" className="btn btn--primary btn--sm" disabled={m.isPending} onClick={() => m.mutate('connect')}>
+              {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} {it.status === 'error' ? 'Erneut verbinden' : 'Verbinden'}
+            </button>
+          )}
+        </div>
+      )}
     </article>
+  );
+}
+
+/** 360dialog key entry: the server checks the key by registering its webhook with 360dialog. */
+function Dialog360KeyForm() {
+  const qc = useQueryClient();
+  const [apiKey, setApiKey] = useState('');
+  const [testAccount, setTestAccount] = useState(true);
+  const m = useMutation({
+    mutationFn: () => api.post<Integration>('/integrations/whatsapp_360dialog/connect', { apiKey: apiKey.trim(), testAccount }),
+    onSuccess: () => {
+      setApiKey('');
+      qc.invalidateQueries({ queryKey: ['integrations'] });
+    },
+  });
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    m.mutate();
+  }
+  return (
+    <form className="form stack" onSubmit={submit}>
+      <div className="field">
+        <label htmlFor="d360-key">360dialog API-Schlüssel</label>
+        <input
+          id="d360-key"
+          type="password"
+          autoComplete="new-password"
+          data-1p-ignore
+          data-lpignore="true"
+          placeholder="Schlüssel aus 360dialog einfügen"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+        <p className="field__hint">Wird verschlüsselt gespeichert. BusinessPilot trägt seine Empfangsadresse selbst bei 360dialog ein.</p>
+      </div>
+      <label className="small">
+        <input type="checkbox" checked={testAccount} onChange={(e) => setTestAccount(e.target.checked)} /> Testzugang (360dialog Sandbox)
+      </label>
+      <FormError error={m.error} />
+      <div className="integration__actions">
+        <button type="submit" className="btn btn--primary btn--sm" disabled={m.isPending || apiKey.trim().length < 8}>
+          {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} Verbinden
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -100,7 +152,7 @@ function LogRow({ e }: { e: WebhookLogEntry }) {
   );
 }
 
-/** The calls fonio made recently, so setup mistakes in the assistant become visible. */
+/** The calls fonio and 360dialog made recently, so setup mistakes become visible. */
 function FonioLog() {
   const q = useQuery({
     queryKey: ['fonio-log'],
@@ -111,12 +163,12 @@ function FonioLog() {
   return (
     <section className="card card--pad stack" aria-labelledby="fonio-log-h">
       <header className="integration__head">
-        <h2 id="fonio-log-h">Letzte Aufrufe von fonio</h2>
+        <h2 id="fonio-log-h">Letzte Aufrufe von fonio und WhatsApp</h2>
         <button type="button" className="btn btn--outline btn--sm" onClick={() => q.refetch()} disabled={q.isFetching}>
           {q.isFetching ? <Spinner /> : <RefreshCw aria-hidden="true" />} Aktualisieren
         </button>
       </header>
-      <p className="muted small">Zeigt, was fonio bei Anrufen an BusinessPilot geschickt hat. Nach einem Neustart des Servers ist die Liste leer.</p>
+      <p className="muted small">Zeigt, was fonio und 360dialog an BusinessPilot geschickt haben. Nach einem Neustart des Servers ist die Liste leer.</p>
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && rows.length === 0 && <p className="small">Noch keine Aufrufe seit dem letzten Neustart.</p>}
       {rows.length > 0 && (
@@ -182,7 +234,7 @@ export function IntegrationsPage() {
           ))}
         </div>
       )}
-      {q.data?.some((i) => i.provider === 'fonio' && i.status === 'connected') && <FonioLog />}
+      {q.data?.some((i) => (i.provider === 'fonio' || i.provider === 'whatsapp_360dialog') && i.status === 'connected') && <FonioLog />}
     </div>
   );
 }

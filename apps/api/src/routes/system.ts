@@ -22,7 +22,8 @@ import { auth, optionalString, parse, requireRole, userActor } from '../lib/http
 import { newId } from '../lib/ids.js';
 import { IONOS_BASE_URL, listModels, openAiCompatibleLlm } from '../providers/openai-compatible.js';
 import { PROVIDERS } from '../providers/registry.js';
-import { canEncrypt } from '../lib/secretbox.js';
+import { canEncrypt, encrypt } from '../lib/secretbox.js';
+import { setDialog360Webhook } from '../providers/dialog360.js';
 import { clearAiSettings, getAiSettings, saveAiSettings, storedToken } from '../services/ai-settings.js';
 import { answerQuestion } from '../services/knowledge.js';
 import { webhookLog } from '../services/webhook-log.js';
@@ -291,20 +292,28 @@ export async function systemRoutes(app: FastifyInstance) {
   // Integrations
   const integrationList = async (tenantId: string) => {
     const rows = await db.select().from(integrations).where(eq(integrations.tenantId, tenantId));
+    const ai = await getAiSettings(db);
     return PROVIDERS.map((p) => {
       const row = rows.find((r) => r.provider === p.provider);
+      // The model is set up once for the whole platform, so every tenant sees it as connected.
+      if (p.provider === 'openai') {
+        return { ...providerBase(p), mode: ai.configured ? 'live' : 'sandbox', status: ai.configured ? 'connected' : 'disconnected', lastError: null, webhookUrl: null, detail: ai.model };
+      }
       return {
-        provider: p.provider,
-        name: p.name,
-        description: p.description,
-        category: p.category,
+        ...providerBase(p),
         mode: row?.mode ?? 'sandbox',
         status: row?.status ?? 'disconnected',
         lastError: row?.lastError ?? null,
-        webhookUrl: p.provider === 'fonio' ? `${app.publicUrl}/api/voice/fonio/inbound` : p.hasWebhook ? `${app.publicUrl}/api/webhooks/${p.provider}` : null,
+        // WhatsApp's webhook address carries a secret and is registered with 360dialog automatically.
+        webhookUrl: p.provider === 'fonio' ? `${app.publicUrl}/api/voice/fonio/inbound` : p.hasWebhook && p.provider !== 'whatsapp_360dialog' ? `${app.publicUrl}/api/webhooks/${p.provider}` : null,
+        detail:
+          p.provider === 'whatsapp_360dialog' && row?.mode === 'live'
+            ? `${row.config.testAccount === 'true' ? '360dialog-Testzugang' : '360dialog'}, Schlüssel ${row.config.keyHint}`
+            : null,
       };
     });
   };
+  const providerBase = (p: (typeof PROVIDERS)[number]) => ({ provider: p.provider, name: p.name, description: p.description, category: p.category });
 
   app.get('/integrations', async (req) => integrationList(auth(req).tenantId));
 
@@ -318,10 +327,32 @@ export async function systemRoutes(app: FastifyInstance) {
     const a = requireRole(req, ['owner', 'admin']);
     const provider = (req.params as { provider: string }).provider;
     if (!PROVIDERS.some((p) => p.provider === provider)) throw notFound('Integration');
+    if (provider === 'openai') throw badRequest('Das KI-Modell wird unter Plattform-Admin eingerichtet.');
+    const body = parse(z.object({ apiKey: optionalString, testAccount: z.boolean().optional() }), req.body ?? {});
+
+    // With a 360dialog key WhatsApp goes live: the key is checked by registering our webhook,
+    // whose address carries a fresh secret because 360dialog's test account can't send headers.
+    let mode: 'sandbox' | 'live' = 'sandbox';
+    let config: Record<string, string> = {};
+    if (provider === 'whatsapp_360dialog' && body.apiKey) {
+      if (!canEncrypt()) throw badRequest('Auf dem Server fehlt APP_SECRET, deshalb kann der Schlüssel nicht sicher gespeichert werden.');
+      const apiKey = body.apiKey.trim();
+      const testAccount = body.testAccount ?? true;
+      const secret = `wh_${newToken()}`;
+      try {
+        await setDialog360Webhook({ apiKey, testAccount }, `${app.publicUrl}/api/webhooks/whatsapp_360dialog/${secret}`);
+      } catch (err) {
+        throw badRequest(`Verbindung zu 360dialog fehlgeschlagen: ${(err as Error).message}`, 'provider_rejected');
+      }
+      await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.tenantId, a.tenantId), eq(apiKeys.provider, provider)));
+      await db.insert(apiKeys).values({ id: sha256(secret), tenantId: a.tenantId, provider, label: 'WhatsApp Webhook' });
+      mode = 'live';
+      config = { apiKey: encrypt(apiKey), keyHint: `…${apiKey.slice(-4)}`, testAccount: String(testAccount) };
+    }
     await db
       .insert(integrations)
-      .values({ id: newId('int'), tenantId: a.tenantId, provider, mode: 'sandbox', status: 'connected' })
-      .onConflictDoUpdate({ target: [integrations.tenantId, integrations.provider], set: { status: 'connected', lastError: null, updatedAt: new Date() } });
+      .values({ id: newId('int'), tenantId: a.tenantId, provider, mode, status: 'connected', config })
+      .onConflictDoUpdate({ target: [integrations.tenantId, integrations.provider], set: { mode, status: 'connected', config, lastError: null, updatedAt: new Date() } });
 
     // fonio authenticates its webhook calls with a bearer key; it is shown exactly once.
     let apiKey: string | undefined;
@@ -331,7 +362,7 @@ export async function systemRoutes(app: FastifyInstance) {
       await db.insert(apiKeys).values({ id: sha256(apiKey), tenantId: a.tenantId, provider: 'fonio', label: 'fonio Webhook' });
     }
     const name = PROVIDERS.find((p) => p.provider === provider)!.name;
-    await recordEvent(db, { tenantId: a.tenantId, type: 'integration.connected', actor: userActor(a), summary: `${name} verbunden (Sandbox)` });
+    await recordEvent(db, { tenantId: a.tenantId, type: 'integration.connected', actor: userActor(a), summary: `${name} verbunden (${mode === 'live' ? 'live' : 'Sandbox'})` });
     const item = (await integrationList(a.tenantId)).find((i) => i.provider === provider)!;
     return { ...item, apiKey };
   });
@@ -342,10 +373,10 @@ export async function systemRoutes(app: FastifyInstance) {
     if (!PROVIDERS.some((p) => p.provider === provider)) throw notFound('Integration');
     await db
       .update(integrations)
-      .set({ status: 'disconnected', updatedAt: new Date() })
+      .set({ status: 'disconnected', mode: 'sandbox', config: {}, updatedAt: new Date() })
       .where(and(eq(integrations.tenantId, a.tenantId), eq(integrations.provider, provider)));
-    if (provider === 'fonio') {
-      await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.tenantId, a.tenantId), eq(apiKeys.provider, 'fonio')));
+    if (provider === 'fonio' || provider === 'whatsapp_360dialog') {
+      await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.tenantId, a.tenantId), eq(apiKeys.provider, provider)));
     }
     const name = PROVIDERS.find((p) => p.provider === provider)!.name;
     await recordEvent(db, { tenantId: a.tenantId, type: 'integration.disconnected', actor: userActor(a), summary: `${name} getrennt` });
