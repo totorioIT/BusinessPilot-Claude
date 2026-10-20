@@ -10,6 +10,7 @@ import {
   customers,
   leads,
   messages,
+  serviceTypes,
   tasks,
   tenants,
   voiceSessions,
@@ -19,11 +20,11 @@ import { HttpError } from '../lib/errors.js';
 import { recordEvent } from '../lib/events.js';
 import { parse } from '../lib/http.js';
 import { newId } from '../lib/ids.js';
-import { addMinutes, localDate, localTime, spokenDateTime, zonedToUtc } from '../lib/time.js';
+import { addMinutes, isoWeekday, localDate, localTime, spokenDateTime, zonedToUtc } from '../lib/time.js';
 import { providersFor } from '../providers/registry.js';
 import { automationHooks } from '../services/automations.js';
 import { answerQuestion } from '../services/knowledge.js';
-import { bookSlot, findServiceType, searchAvailability } from '../services/scheduling.js';
+import { bookSlot, searchAvailability } from '../services/scheduling.js';
 import { logWebhook } from '../services/webhook-log.js';
 import { nextCustomerNumber } from './crm.js';
 
@@ -69,14 +70,89 @@ async function tenantFromKey(app: FastifyInstance, req: FastifyRequest) {
   return tenant;
 }
 
-async function voiceSession(app: FastifyInstance, tenantId: string, token: string | null) {
-  if (!token) throw new HttpError(400, 'session_required', 'session_token fehlt.');
+/** The session a fonio call was given at ring time. */
+async function voiceSession(app: FastifyInstance, tenantId: string, token: string | null, call?: { callId: string | null; fromNumber?: string | null }) {
+  if (!token) {
+    // Browser test calls in fonio skip the inbound webhook, so tools and the post-call report
+    // can identify the call by fonio's call id instead; the first one to arrive opens the session.
+    if (call?.callId) return callSession(app, tenantId, call.callId, call.fromNumber ?? null);
+    throw new HttpError(400, 'session_required', 'session_token oder call_id fehlt.');
+  }
   const [s] = await app.db
     .select()
     .from(voiceSessions)
     .where(and(eq(voiceSessions.id, sha256(token)), eq(voiceSessions.tenantId, tenantId), gt(voiceSessions.expiresAt, new Date())));
   if (!s) throw new HttpError(401, 'session_expired', 'Die Gesprächssitzung ist abgelaufen.');
   return s;
+}
+
+const callSessionId = (tenantId: string, callId: string) => sha256(`fonio-call:${tenantId}:${callId}`);
+
+async function callSession(app: FastifyInstance, tenantId: string, callId: string, fromNumber: string | null) {
+  const id = callSessionId(tenantId, callId);
+  const [existing] = await app.db.select().from(voiceSessions).where(eq(voiceSessions.id, id));
+  if (existing) return existing;
+  const [conv] = await app.db
+    .insert(conversations)
+    .values({ id: newId('conv'), tenantId, channel: 'phone', status: 'ai_handling', contactAddress: fromNumber, subject: 'Eingehender Anruf' })
+    .returning();
+  const [created] = await app.db
+    .insert(voiceSessions)
+    .values({ id, tenantId, conversationId: conv.id, fromNumber, expiresAt: addMinutes(new Date(), SESSION_MINUTES) })
+    .onConflictDoNothing()
+    .returning();
+  if (created) return created;
+  // Two tool calls raced; keep the session that won and drop the spare conversation.
+  await app.db.delete(conversations).where(eq(conversations.id, conv.id));
+  const [winner] = await app.db.select().from(voiceSessions).where(eq(voiceSessions.id, id));
+  return winner;
+}
+
+const WEEKDAYS = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag', 'sonntag'];
+
+/** What a voice agent says about a date ("2026-10-24", "24.10.", "morgen", "Samstag") → "YYYY-MM-DD". */
+export function spokenDate(input: string | null, timeZone: string, now = new Date()): string | null {
+  if (!input) return null;
+  const text = input.trim().toLowerCase();
+  const today = localDate(now, timeZone);
+  const plusDays = (n: number) => localDate(addMinutes(zonedToUtc(today, '12:00', timeZone), n * 1440), timeZone);
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  const dm = text.match(/(\d{1,2})\.\s*(\d{1,2})\.?\s*(\d{2,4})?/);
+  if (dm) {
+    const year = dm[3] ? (dm[3].length === 2 ? 2000 + Number(dm[3]) : Number(dm[3])) : Number(today.slice(0, 4));
+    let date = `${year}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
+    if (!dm[3] && date < today) date = `${year + 1}${date.slice(4)}`;
+    return date;
+  }
+  if (/übermorgen|uebermorgen/.test(text)) return plusDays(2);
+  if (/morgen/.test(text)) return plusDays(1);
+  if (/heute/.test(text)) return today;
+  const wd = WEEKDAYS.findIndex((d) => text.includes(d));
+  if (wd >= 0) {
+    const diff = (wd + 1 - isoWeekday(today) + 7) % 7;
+    return plusDays(diff === 0 && /nächst|naechst/.test(text) ? 7 : diff);
+  }
+  return null;
+}
+
+/** "10:30", "10.30", "10 Uhr", "halb elf" is out of scope → "HH:MM". */
+export function spokenTime(input: string | null): string | null {
+  const m = input?.match(/(\d{1,2})(?:[:.](\d{2}))?/);
+  if (!m || Number(m[1]) > 23) return null;
+  return `${m[1].padStart(2, '0')}:${m[2] ?? '00'}`;
+}
+
+/** Finds the service by code or by what the caller called it ("Reifen wechseln" → reifenwechsel). */
+async function voiceServiceType(db: FastifyInstance['db'], tenantId: string, input: string) {
+  const norm = (v: string) => v.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '');
+  const all = await db.select().from(serviceTypes).where(and(eq(serviceTypes.tenantId, tenantId), eq(serviceTypes.active, true)));
+  const q = norm(input);
+  const st =
+    all.find((s) => s.code === input) ??
+    all.find((s) => norm(s.code) === q || norm(s.name) === q) ??
+    all.find((s) => q.includes(norm(s.code)) || norm(s.name).includes(q) || q.includes(norm(s.name))) ??
+    all.find((s) => norm(s.code).slice(0, 5) === q.slice(0, 5));
+  return { st: st ?? null, names: all.map((s) => s.name) };
 }
 
 const timeOfDayFilter = (tod: string | null, start: Date, tz: string) => {
@@ -173,8 +249,8 @@ export async function voiceRoutes(app: FastifyInstance) {
 
   app.post('/tools/customer/lookup', async (req) => {
     const tenant = await tenantFromKey(app, req);
-    const body = parse(z.object({ session_token: str, phone: str, name: str, plate: str }).passthrough(), req.body);
-    const session = await voiceSession(app, tenant.id, body.session_token);
+    const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, phone: str, name: str, plate: str }).passthrough(), req.body);
+    const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     let rows: (typeof customers.$inferSelect)[] = [];
     if (body.plate) {
       const plate = body.plate.replace(/[\s-]/g, '').toUpperCase();
@@ -218,16 +294,14 @@ export async function voiceRoutes(app: FastifyInstance) {
       z.object({ session_token: str, service_code: str, requested_date: str, requested_time_of_day: str }).passthrough(),
       req.body,
     );
-    await voiceSession(app, tenant.id, body.session_token);
+    // Searching changes nothing, so it needs no session: fonio may ask before anything else happened.
     if (!body.service_code) return { ok: false, result: 'service_required', spoken_summary: 'Um welche Leistung geht es genau?' };
-    let st;
-    try {
-      st = await findServiceType(db, tenant.id, body.service_code);
-    } catch {
-      return { ok: false, result: 'unknown_service', spoken_summary: 'Diese Leistung kann ich leider nicht direkt buchen. Ich notiere einen Rückruf.' };
+    const { st, names } = await voiceServiceType(db, tenant.id, body.service_code);
+    if (!st) {
+      return { ok: false, result: 'unknown_service', services: names, spoken_summary: `Diese Leistung kann ich leider nicht direkt buchen. Buchen kann ich: ${names.join(', ')}.` };
     }
     const providers = await providersFor(db, tenant.id);
-    const startDate = body.requested_date && /^\d{4}-\d{2}-\d{2}$/.test(body.requested_date) ? body.requested_date : localDate(new Date(), tenant.timezone);
+    const startDate = spokenDate(body.requested_date, tenant.timezone) ?? localDate(new Date(), tenant.timezone);
 
     try {
       // Look at the requested day first, then up to a week ahead, and offer at most three slots.
@@ -243,7 +317,14 @@ export async function voiceRoutes(app: FastifyInstance) {
         return {
           ok: true,
           result: 'slots_available',
-          slots: offer.map((s) => ({ slot_id: s.slotId, starts_at: s.startsAt.toISOString(), ends_at: s.endsAt.toISOString() })),
+          service_code: st.code,
+          slots: offer.map((s) => ({
+            slot_id: s.slotId,
+            date: localDate(s.startsAt, tenant.timezone),
+            time: localTime(s.startsAt, tenant.timezone),
+            starts_at: s.startsAt.toISOString(),
+            ends_at: s.endsAt.toISOString(),
+          })),
           spoken_summary: `${i === 0 ? '' : 'An Ihrem Wunschtag ist leider nichts frei. '}Am ${day} sind Termine um ${times.join(', ').replace(/, ([^,]*)$/, ' und $1')} frei.`,
           requires_customer_confirmation: true,
         };
@@ -262,7 +343,11 @@ export async function voiceRoutes(app: FastifyInstance) {
       z
         .object({
           session_token: str,
+          call_id: str,
+          fromNumber: str,
           slot_id: str,
+          date: str,
+          time: str,
           service_code: str,
           customer_id: str,
           vehicle_id: str,
@@ -273,11 +358,31 @@ export async function voiceRoutes(app: FastifyInstance) {
         .passthrough(),
       req.body,
     );
-    const session = await voiceSession(app, tenant.id, body.session_token);
+    const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     if (!body.customer_confirmed) {
       return { ok: false, result: 'confirmation_required', spoken_summary: 'Soll ich den Termin verbindlich für Sie buchen?' };
     }
-    if (!body.slot_id) return { ok: false, result: 'slot_required', spoken_summary: 'Welchen der Termine möchten Sie?' };
+    let slotId = body.slot_id;
+    if (!slotId) {
+      // Voice agents repeat what was said ("Samstag, 10 Uhr") more reliably than an opaque slot id.
+      const date = spokenDate(body.date, tenant.timezone);
+      const time = spokenTime(body.time);
+      if (!date || !time || !body.service_code) return { ok: false, result: 'slot_required', spoken_summary: 'Für welche Leistung und an welchem Tag zu welcher Uhrzeit möchten Sie den Termin?' };
+      const { st, names } = await voiceServiceType(db, tenant.id, body.service_code);
+      if (!st) return { ok: false, result: 'unknown_service', services: names, spoken_summary: `Buchen kann ich: ${names.join(', ')}.` };
+      const providers = await providersFor(db, tenant.id);
+      const slots = await searchAvailability(db, { tenantId: tenant.id, serviceCode: st.code, date, calendar: providers.calendar });
+      const match = slots.find((s) => localTime(s.startsAt, tenant.timezone) === time);
+      if (!match) {
+        const times = slots.slice(0, 3).map((s) => `${localTime(s.startsAt, tenant.timezone)} Uhr`);
+        return {
+          ok: false,
+          result: 'slot_unavailable',
+          spoken_summary: times.length ? `Um ${time} Uhr ist leider nichts frei. An dem Tag ginge noch ${times.join(', ').replace(/, ([^,]*)$/, ' oder $1')}.` : 'An diesem Tag ist leider nichts mehr frei.',
+        };
+      }
+      slotId = match.slotId;
+    }
 
     let customerId = body.customer_id ?? session.customerId;
     if (customerId) {
@@ -300,11 +405,11 @@ export async function voiceRoutes(app: FastifyInstance) {
     try {
       const result = await bookSlot(db, {
         tenantId: tenant.id,
-        slotId: body.slot_id,
+        slotId,
         customerId,
         assetId: body.vehicle_id,
         channel: 'Telefon',
-        idempotencyKey: body.idempotency_key ?? sha256(`${session.id}:${body.slot_id}`),
+        idempotencyKey: body.idempotency_key ?? sha256(`${session.id}:${slotId}`),
         calendar: providers.calendar,
       });
       const apt = result.appointment;
@@ -337,8 +442,8 @@ export async function voiceRoutes(app: FastifyInstance) {
 
   app.post('/tools/service-request', async (req) => {
     const tenant = await tenantFromKey(app, req);
-    const body = parse(z.object({ session_token: str, description: str, title: str }).passthrough(), req.body);
-    const session = await voiceSession(app, tenant.id, body.session_token);
+    const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, description: str, title: str }).passthrough(), req.body);
+    const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     const title = body.title ?? body.description?.slice(0, 80) ?? 'Anfrage aus Anruf';
     const [lead] = await db
       .insert(leads)
@@ -359,8 +464,8 @@ export async function voiceRoutes(app: FastifyInstance) {
 
   app.post('/tools/callback', async (req) => {
     const tenant = await tenantFromKey(app, req);
-    const body = parse(z.object({ session_token: str, reason: str, preferred_time: str }).passthrough(), req.body);
-    const session = await voiceSession(app, tenant.id, body.session_token);
+    const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, reason: str, preferred_time: str }).passthrough(), req.body);
+    const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     const [task] = await db
       .insert(tasks)
       .values({
@@ -390,8 +495,8 @@ export async function voiceRoutes(app: FastifyInstance) {
 
   app.post('/tools/transfer-target', async (req) => {
     const tenant = await tenantFromKey(app, req);
-    const body = parse(z.object({ session_token: str, reason: str }).passthrough(), req.body);
-    const session = await voiceSession(app, tenant.id, body.session_token);
+    const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, reason: str }).passthrough(), req.body);
+    const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     if (session.conversationId) await db.update(conversations).set({ status: 'needs_staff' }).where(eq(conversations.id, session.conversationId));
     await recordEvent(db, { tenantId: tenant.id, type: 'conversation.handoff', actor: AI, summary: `Anruf an Team weitergeleitet${body.reason ? `: ${body.reason}` : ''}` });
     return { ok: true, transfer_number: tenant.phone ?? '', spoken_summary: 'Ich verbinde Sie jetzt mit einem Kollegen.' };
@@ -424,6 +529,9 @@ export async function voiceRoutes(app: FastifyInstance) {
     let [session] = body.session_token
       ? await db.select().from(voiceSessions).where(and(eq(voiceSessions.id, sha256(body.session_token)), eq(voiceSessions.tenantId, tenant.id)))
       : [];
+    if (!session && body.call_id) {
+      [session] = await db.select().from(voiceSessions).where(eq(voiceSessions.id, callSessionId(tenant.id, body.call_id)));
+    }
     if (!session) {
       // fonio doesn't always hand the inbound variables on to the post-call request. Then the
       // call belongs to the newest recent session without a call record, preferring the caller's number.

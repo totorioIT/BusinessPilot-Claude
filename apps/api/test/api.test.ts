@@ -217,6 +217,39 @@ describe('fonio voice flow', () => {
     assert.ok(Math.abs(detail.body.call.durationSec - 90) <= 5, 'duration from the start time');
   });
 
+  it('books by spoken day, time and service name with only fonio\'s call id', async () => {
+    const date = nextWeekday(6);
+    const search = await t.voice('/tools/availability/search', { service_code: 'Reifen wechseln', requested_date: date });
+    assert.equal(search.body.result, 'slots_available');
+    const slot = search.body.slots[0];
+    assert.match(slot.time, /^\d\d:\d\d$/);
+
+    const unknown = await t.voice('/tools/appointments/book', { call_id: 'fonio-call-1', service_code: 'Reifenwechsel', date: slot.date, time: '03:00', customer_confirmed: 'true', customer_name: 'Tel Kunde' });
+    assert.equal(unknown.body.result, 'slot_unavailable');
+
+    const [d, m] = [slot.date.slice(8, 10), slot.date.slice(5, 7)];
+    const book = await t.voice('/tools/appointments/book', { call_id: 'fonio-call-1', service_code: 'Reifenwechsel', date: `${d}.${m}.`, time: `${slot.time} Uhr`, customer_confirmed: 'ja', customer_name: 'Tel Kunde' });
+    assert.equal(book.body.result, 'appointment_booked');
+
+    // The report after the call lands in the same conversation as the booking.
+    const post = await t.voice('/fonio/post-call', { call_id: 'fonio-call-1', summary: 'Reifenwechsel per Call-ID gebucht' });
+    assert.equal(post.status, 200);
+    const list = await t.api('GET', '/conversations?channel=phone');
+    const conv = list.body.items.find((c: { preview: string }) => c.preview === 'Reifenwechsel per Call-ID gebucht');
+    assert.equal(conv.contactName, 'Tel Kunde');
+  });
+
+  it('understands spoken dates', async () => {
+    const { spokenDate, spokenTime } = await import('../src/routes/voice.js');
+    const now = new Date('2026-10-20T10:00:00Z'); // a Tuesday
+    assert.equal(spokenDate('morgen', 'Europe/Berlin', now), '2026-10-21');
+    assert.equal(spokenDate('Samstag', 'Europe/Berlin', now), '2026-10-24');
+    assert.equal(spokenDate('nächsten Dienstag', 'Europe/Berlin', now), '2026-10-27');
+    assert.equal(spokenDate('3.1.', 'Europe/Berlin', now), '2027-01-03');
+    assert.equal(spokenTime('9 Uhr'), '09:00');
+    assert.equal(spokenTime('14.30'), '14:30');
+  });
+
   it('answers from the knowledge base', async () => {
     const res = await t.voice('/tools/knowledge/query', { question: 'Wann habt ihr samstags offen?' });
     assert.match(res.body.answer, /samstags/);

@@ -130,6 +130,7 @@ LLM account shared by all tenants (OpenAI-compatible, default IONOS AI Model Hub
 
 ## Voice webhooks (fonio)
 Authenticated with `Authorization: Bearer <tenant api key>`; no cookie.
+Tools identify the call by `session_token` (from inbound) or, when fonio skipped the inbound webhook (browser test calls), by `call_id` (fonio's conversation id); the first request with a new `call_id` opens the conversation. `availability/search` needs neither. Services may be given by code or spoken name; dates as `YYYY-MM-DD`, `24.10.`, `morgen` or a weekday; booking accepts `service_code` + `date` + `time` instead of `slot_id`.
 | Method | Path | Purpose |
 |---|---|---|
 | POST | /voice/fonio/inbound | `{fromNumber,toNumber}` → caller context + `bp_session_token` |
