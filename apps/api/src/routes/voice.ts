@@ -46,6 +46,12 @@ const bool = z
   .nullable()
   .transform((v) => v === true || (typeof v === 'string' && ['true', 'ja', 'yes', '1'].includes(v.toLowerCase())));
 
+/** fonio sends the call's start time but no duration; the report arrives right after hang-up. */
+const secondsSince = (start: unknown) => {
+  const t = typeof start === 'string' || typeof start === 'number' ? new Date(start).getTime() : NaN;
+  return Number.isFinite(t) ? Math.max(0, Math.min(4 * 3600, Math.round((Date.now() - t) / 1000))) : 0;
+};
+
 /** Compare phone numbers by their last 9 digits, which ignores +49 / 0 prefixes and spacing. */
 export const phoneKey = (phone: string) => phone.replace(/\D/g, '').slice(-9);
 
@@ -473,7 +479,7 @@ export async function voiceRoutes(app: FastifyInstance) {
       conversationId: session.conversationId,
       fromNumber: session.fromNumber,
       startedAt: session.createdAt,
-      durationSec: body.duration_sec ?? 0,
+      durationSec: body.duration_sec ?? secondsSince((body as Record<string, unknown>).started_at),
       outcome: body.outcome,
       intent: body.intent,
       summary: body.summary,

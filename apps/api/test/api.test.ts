@@ -209,10 +209,12 @@ describe('fonio voice flow', () => {
     // The earlier tests leave open sessions; age them past the fallback window.
     const { voiceSessions } = await import('../src/db/schema.js');
     await t.db.update(voiceSessions).set({ createdAt: new Date(Date.now() - 3 * 3600_000) });
-    const post = await t.voice('/fonio/post-call', { summary: 'Nur Nachbericht', fromNumber: '+49 171 5550002' });
+    const post = await t.voice('/fonio/post-call', { summary: 'Nur Nachbericht', fromNumber: '+49 171 5550002', started_at: new Date(Date.now() - 90_000).toISOString() });
     assert.equal(post.status, 200);
     const list = await t.api('GET', '/conversations?channel=phone');
-    assert.ok(list.body.items.some((c: { preview: string }) => c.preview === 'Nur Nachbericht'));
+    const conv = list.body.items.find((c: { preview: string }) => c.preview === 'Nur Nachbericht');
+    const detail = await t.api('GET', `/conversations/${conv.id}`);
+    assert.ok(Math.abs(detail.body.call.durationSec - 90) <= 5, 'duration from the start time');
   });
 
   it('answers from the knowledge base', async () => {
