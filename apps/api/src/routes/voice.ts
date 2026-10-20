@@ -432,8 +432,21 @@ export async function voiceRoutes(app: FastifyInstance) {
       const key = typeof from === 'string' && phoneKey(from).length >= 6 ? phoneKey(from) : null;
       session = (key && candidates.find((c) => c.session.fromNumber && phoneKey(c.session.fromNumber) === key)?.session) || candidates[0]?.session;
       if (session) (req as FastifyRequest & { voiceNote?: string }).voiceNote = 'Ohne gültiges session_token dem letzten offenen Anruf zugeordnet.';
+      else {
+        // No inbound webhook ran for this call (e.g. a browser test call), so the report opens its own conversation.
+        const fromNumber = typeof from === 'string' && from.trim() ? from.trim() : null;
+        const [conv] = await db
+          .insert(conversations)
+          .values({ id: newId('conv'), tenantId: tenant.id, channel: 'phone', status: 'ai_handling', contactAddress: fromNumber, subject: 'Anruf' })
+          .returning();
+        [session] = await db
+          .insert(voiceSessions)
+          .values({ id: sha256(`sess_${newToken()}`), tenantId: tenant.id, conversationId: conv.id, fromNumber, expiresAt: new Date() })
+          .returning();
+        (req as FastifyRequest & { voiceNote?: string }).voiceNote = 'Kein Anrufbeginn gemeldet, neues Gespräch angelegt.';
+      }
     }
-    if (!session?.conversationId) throw new HttpError(404, 'not_found', 'Gespräch nicht gefunden.');
+    if (!session.conversationId) throw new HttpError(404, 'not_found', 'Gespräch nicht gefunden.');
 
     const transcript = Array.isArray(body.transcript)
       ? body.transcript.map((l) => ({ speaker: (/kunde|customer|user/i.test(l.speaker) ? 'customer' : 'ai') as 'customer' | 'ai', text: l.text }))
