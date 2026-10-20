@@ -239,6 +239,22 @@ describe('fonio voice flow', () => {
     assert.equal(conv.contactName, 'Tel Kunde');
   });
 
+  it('keeps a real call in one conversation: inbound, then tools and report by call id', async () => {
+    const inbound = await t.voice('/fonio/inbound', { fromNumber: '0170 1234567' });
+    assert.equal(inbound.body.customer_name, 'Max Müller');
+    const search = await t.voice('/tools/availability/search', { service_code: 'Inspektion', requested_date: nextWeekday(7) });
+    const slot = search.body.slots[0];
+    const book = await t.voice('/tools/appointments/book', { call_id: 'fonio-real-1', service_code: 'Inspektion', date: slot.date, time: slot.time, customer_confirmed: true });
+    assert.equal(book.body.result, 'appointment_booked', 'the caller is known from inbound, so no name is needed');
+    const post = await t.voice('/fonio/post-call', { call_id: 'fonio-real-1', fromNumber: '+491701234567', summary: 'Echter Anruf in einem Gespräch' });
+    assert.equal(post.status, 200);
+    const list = await t.api('GET', '/conversations?channel=phone');
+    const conv = list.body.items.find((c: { preview: string }) => c.preview === 'Echter Anruf in einem Gespräch');
+    assert.equal(conv.contactName, 'Max Müller');
+    const openForCaller = list.body.items.filter((c: { contactName: string; status: string }) => c.contactName === 'Max Müller' && c.status === 'ai_handling');
+    assert.equal(openForCaller.length, 0, 'no orphaned conversation from the inbound webhook');
+  });
+
   it('understands spoken dates', async () => {
     const { spokenDate, spokenTime } = await import('../src/routes/voice.js');
     const now = new Date('2026-10-20T10:00:00Z'); // a Tuesday

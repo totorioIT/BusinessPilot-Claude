@@ -35,6 +35,8 @@ import { nextCustomerNumber } from './crm.js';
 const AI = { type: 'ai' as const, name: null };
 const SESSION_MINUTES = 60;
 const POST_CALL_FALLBACK_MINUTES = 120;
+/** A call's first tool request comes within minutes of ringing; older inbound sessions belong to other calls. */
+const INBOUND_ADOPT_MINUTES = 15;
 
 const str = z
   .union([z.string(), z.number()])
@@ -92,6 +94,36 @@ async function callSession(app: FastifyInstance, tenantId: string, callId: strin
   const id = callSessionId(tenantId, callId);
   const [existing] = await app.db.select().from(voiceSessions).where(eq(voiceSessions.id, id));
   if (existing) return existing;
+
+  // On real calls the inbound webhook already opened a session, but fonio can't hand its token to the
+  // tools. Adopt the newest inbound session no call id has claimed yet, so caller recognition and the
+  // conversation carry over.
+  const [inbound] = await app.db
+    .select({ session: voiceSessions })
+    .from(voiceSessions)
+    .leftJoin(calls, eq(calls.conversationId, voiceSessions.conversationId))
+    .where(
+      and(
+        eq(voiceSessions.tenantId, tenantId),
+        isNull(calls.id),
+        gt(voiceSessions.createdAt, addMinutes(new Date(), -INBOUND_ADOPT_MINUTES)),
+        sql`(select count(*) from ${voiceSessions} v2 where v2.conversation_id = ${voiceSessions.conversationId}) = 1`,
+      ),
+    )
+    .orderBy(desc(voiceSessions.createdAt))
+    .limit(1);
+  if (inbound) {
+    const s = inbound.session;
+    const [adopted] = await app.db
+      .insert(voiceSessions)
+      .values({ id, tenantId, conversationId: s.conversationId, customerId: s.customerId, fromNumber: s.fromNumber ?? fromNumber, expiresAt: s.expiresAt })
+      .onConflictDoNothing()
+      .returning();
+    if (adopted) return adopted;
+    const [winner] = await app.db.select().from(voiceSessions).where(eq(voiceSessions.id, id));
+    return winner;
+  }
+
   const [conv] = await app.db
     .insert(conversations)
     .values({ id: newId('conv'), tenantId, channel: 'phone', status: 'ai_handling', contactAddress: fromNumber, subject: 'Eingehender Anruf' })
