@@ -22,7 +22,8 @@ import { auth, optionalString, parse, requireRole, userActor } from '../lib/http
 import { newId } from '../lib/ids.js';
 import { IONOS_BASE_URL, listModels, openAiCompatibleLlm } from '../providers/openai-compatible.js';
 import { PROVIDERS } from '../providers/registry.js';
-import { canEncrypt, encrypt } from '../lib/secretbox.js';
+import { canEncrypt, decrypt, encrypt } from '../lib/secretbox.js';
+import { revokeGoogleToken } from '../providers/google-calendar.js';
 import { setDialog360Webhook } from '../providers/dialog360.js';
 import { clearAiSettings, getAiSettings, saveAiSettings, storedToken } from '../services/ai-settings.js';
 import { answerQuestion } from '../services/knowledge.js';
@@ -307,9 +308,13 @@ export async function systemRoutes(app: FastifyInstance) {
         // WhatsApp's webhook address carries a secret and is registered with 360dialog automatically.
         webhookUrl: p.provider === 'fonio' ? `${app.publicUrl}/api/voice/fonio/inbound` : p.hasWebhook && p.provider !== 'whatsapp_360dialog' ? `${app.publicUrl}/api/webhooks/${p.provider}` : null,
         detail:
-          p.provider === 'whatsapp_360dialog' && row?.mode === 'live'
-            ? `${row.config.testAccount === 'true' ? '360dialog-Testzugang' : '360dialog'}, Schlüssel ${row.config.keyHint}`
-            : null,
+          row?.mode !== 'live' || row.status !== 'connected'
+            ? null
+            : p.provider === 'whatsapp_360dialog'
+              ? `${row.config.testAccount === 'true' ? '360dialog-Testzugang' : '360dialog'}, Schlüssel ${row.config.keyHint}`
+              : p.provider === 'google_calendar'
+                ? `Verbunden mit ${row.config.account}`
+                : null,
       };
     });
   };
@@ -371,6 +376,11 @@ export async function systemRoutes(app: FastifyInstance) {
     const a = requireRole(req, ['owner', 'admin']);
     const provider = (req.params as { provider: string }).provider;
     if (!PROVIDERS.some((p) => p.provider === provider)) throw notFound('Integration');
+    if (provider === 'google_calendar') {
+      // Give the access back at Google too, so the business's account no longer lists BusinessPilot.
+      const [row] = await db.select().from(integrations).where(and(eq(integrations.tenantId, a.tenantId), eq(integrations.provider, provider)));
+      if (row?.config.refreshToken) await revokeGoogleToken(decrypt(row.config.refreshToken)).catch(() => {});
+    }
     await db
       .update(integrations)
       .set({ status: 'disconnected', mode: 'sandbox', config: {}, updatedAt: new Date() })

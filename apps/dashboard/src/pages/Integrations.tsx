@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Link2, RefreshCw, Unlink } from 'lucide-react';
-import { api, type Integration, type WebhookLogEntry } from '../api';
+import { AlertTriangle, Check, KeyRound, Link2, RefreshCw, Unlink } from 'lucide-react';
+import { api, type GoogleCalendarSetup, type Integration, type WebhookLogEntry } from '../api';
 import { CopyButton } from '../components/CopyButton';
 import { Badge, EmptyState, ErrorState, FormError, PageHeader, Skeleton, Spinner } from '../components/ui';
 
@@ -21,6 +22,12 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
   const connected = it.status === 'connected';
   // WhatsApp goes live with the tenant's own 360dialog key; the platform-wide model is set up by the admin.
   const needsKey = it.provider === 'whatsapp_360dialog' && it.mode !== 'live';
+  // Google Calendar connects through Google's own consent screen.
+  const needsGoogle = it.provider === 'google_calendar' && it.mode !== 'live';
+  const google = useMutation({
+    mutationFn: () => api.post<{ url: string }>('/integrations/google_calendar/start'),
+    onSuccess: (r) => window.location.assign(r.url),
+  });
   const platformManaged = it.provider === 'openai';
   return (
     <article className="card card--pad integration">
@@ -54,7 +61,18 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
       )}
       <FormError error={m.error} />
       {needsKey && <Dialog360KeyForm />}
-      {!platformManaged && !needsKey && (
+      {needsGoogle && (
+        <>
+          <FormError error={google.error} />
+          <div className="integration__actions">
+            <button type="button" className="btn btn--primary btn--sm" disabled={google.isPending} onClick={() => google.mutate()}>
+              {google.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} Mit Google verbinden
+            </button>
+          </div>
+        </>
+      )}
+      {it.provider === 'google_calendar' && it.mode === 'live' && connected && <StaffCalendars />}
+      {!platformManaged && !needsKey && !needsGoogle && (
         <div className="integration__actions">
           {connected ? (
             <button
@@ -118,6 +136,61 @@ function Dialog360KeyForm() {
         <button type="submit" className="btn btn--primary btn--sm" disabled={m.isPending || apiKey.trim().length < 8}>
           {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} Verbinden
         </button>
+      </div>
+    </form>
+  );
+}
+
+/** Which Google calendar belongs to which staff member: their busy times block slots, bookings land there. */
+function StaffCalendars() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['google-calendars'], queryFn: () => api.get<GoogleCalendarSetup>('/integrations/google_calendar/calendars') });
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (q.data) setMapping(Object.fromEntries(q.data.staff.map((s) => [s.id, s.calendarId ?? ''])));
+  }, [q.data]);
+  const save = useMutation({
+    mutationFn: () => api.put('/integrations/google_calendar/calendars', { staffCalendars: Object.fromEntries(Object.entries(mapping).map(([k, v]) => [k, v || null])) }),
+    onSuccess: () => {
+      setSaved(true);
+      qc.invalidateQueries({ queryKey: ['google-calendars'] });
+    },
+  });
+  if (q.isPending) return <Skeleton lines={2} />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+  const main = q.data.calendars.find((c) => c.primary)?.name ?? 'Hauptkalender';
+  return (
+    <form
+      className="form stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setSaved(false);
+        save.mutate();
+      }}
+    >
+      <p className="small muted">
+        Kalender je Mitarbeiter: Termine dort blockieren Zeiten, Buchungen landen dort. Ohne Auswahl kommt die Buchung in „{main}“.
+      </p>
+      {q.data.staff.map((s) => (
+        <div className="field" key={s.id}>
+          <label htmlFor={`gcal-${s.id}`}>{s.name}</label>
+          <select id={`gcal-${s.id}`} value={mapping[s.id] ?? ''} onChange={(e) => setMapping((m) => ({ ...m, [s.id]: e.target.value }))}>
+            <option value="">Nicht abgleichen</option>
+            {q.data.calendars.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+      <FormError error={save.error} />
+      <div className="integration__actions">
+        <button type="submit" className="btn btn--outline btn--sm" disabled={save.isPending}>
+          {save.isPending ? <Spinner /> : <Check aria-hidden="true" />} Zuordnung speichern
+        </button>
+        {saved && <span className="small" role="status">Gespeichert.</span>}
       </div>
     </form>
   );
@@ -198,10 +271,28 @@ export function IntegrationsPage() {
   const q = useQuery({ queryKey: ['integrations'], queryFn: () => api.get<Integration[]>('/integrations') });
   const [key, setKey] = useState<{ provider: string; key: string } | null>(null);
   const keyName = key ? q.data?.find((i) => i.provider === key.provider)?.name ?? key.provider : '';
+  // Google sends the browser back with the outcome in the address; show it once, then tidy the URL.
+  const [params, setParams] = useSearchParams();
+  const [googleResult] = useState(() => ({ ok: params.get('google') === 'connected', error: params.get('google_error') }));
+  useEffect(() => {
+    if (params.has('google') || params.has('google_error')) setParams({}, { replace: true });
+  }, [params, setParams]);
 
   return (
     <div className="stack-lg">
       <PageHeader title="Integrationen" subtitle="Modulare Anbindungen an Telefon, WhatsApp, Kalender und mehr." />
+      {googleResult.ok && (
+        <p className="notice" role="status">
+          <Check aria-hidden="true" />
+          <span>Google Kalender ist verbunden. Ordnen Sie unten auf der Karte die Kalender Ihren Mitarbeitern zu.</span>
+        </p>
+      )}
+      {googleResult.error && (
+        <p className="notice notice--warn" role="alert">
+          <AlertTriangle aria-hidden="true" />
+          <span>Google Kalender wurde nicht verbunden: {googleResult.error}</span>
+        </p>
+      )}
       {key && (
         <section className="key-box" role="status" aria-labelledby="key-h">
           <h2 id="key-h">

@@ -16,6 +16,7 @@ import { schedulingRoutes } from './routes/scheduling.js';
 import { systemRoutes } from './routes/system.js';
 import { voiceRoutes } from './routes/voice.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import { googleRoutes } from './routes/google.js';
 
 export type AppOptions = {
   db: Db;
@@ -95,6 +96,7 @@ export async function buildApp(opts: AppOptions) {
   await app.register(systemRoutes, { prefix: '/api' });
   await app.register(voiceRoutes, { prefix: '/api/voice' });
   await app.register(webhookRoutes, { prefix: '/api/webhooks' });
+  await app.register(googleRoutes, { prefix: '/api' });
 
   if (opts.dashboardDist && existsSync(opts.dashboardDist)) {
     await app.register(fastifyStatic, { root: path.resolve(opts.dashboardDist), wildcard: false });

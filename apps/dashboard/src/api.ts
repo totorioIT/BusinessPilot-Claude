@@ -401,3 +401,18 @@ export interface AiTestResult {
   ms: number;
   sources: { id: string; title: string }[];
 }
+
+export interface GoogleSettings {
+  configured: boolean;
+  clientId: string | null;
+  secretHint: string | null;
+  redirectUri: string;
+  updatedAt: string | null;
+  canStoreSecrets: boolean;
+}
+
+export interface GoogleCalendarSetup {
+  account: string;
+  calendars: { id: string; name: string; primary: boolean }[];
+  staff: { id: string; name: string; calendarId: string | null }[];
+}

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Activity, Building2, Users } from 'lucide-react';
 import { api, type AdminTenants } from '../api';
 import { AiModelCard } from '../components/AiModelCard';
+import { GoogleOAuthCard } from '../components/GoogleOAuthCard';
 import { Badge, EmptyState, ErrorState, PageHeader, Skeleton, SkeletonTiles, StatTile } from '../components/ui';
 import { formatDate, formatNumber } from '../lib/format';
 
@@ -19,6 +20,7 @@ export function AdminPage() {
     <div className="stack-lg">
       <PageHeader title="Plattform-Admin" subtitle="Einstellungen für die ganze Plattform und Übersicht über alle Mandanten." />
       <AiModelCard />
+      <GoogleOAuthCard />
       {q.isPending && <SkeletonTiles count={3} />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && (

@@ -26,7 +26,8 @@ export type BusyInterval = { start: Date; end: Date };
 
 export interface CalendarProvider {
   freeBusy(input: { calendarIds: string[]; from: Date; to: Date }): Promise<Record<string, BusyInterval[]>>;
-  createEvent(input: { calendarId: string; title: string; start: Date; end: Date; description?: string }): Promise<{ eventId: string }>;
+  /** eventId is null when the external calendar could not take the event; the booking still stands. */
+  createEvent(input: { calendarId: string; title: string; start: Date; end: Date; description?: string }): Promise<{ eventId: string | null }>;
   cancelEvent(input: { calendarId: string; eventId: string }): Promise<void>;
 }
 
