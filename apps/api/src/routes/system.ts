@@ -314,7 +314,11 @@ export async function systemRoutes(app: FastifyInstance) {
               ? `${row.config.testAccount === 'true' ? '360dialog-Testzugang' : '360dialog'}, Schlüssel ${row.config.keyHint}`
               : p.provider === 'google_calendar'
                 ? `Verbunden mit ${row.config.account}`
-                : null,
+                : p.provider === 'google_business'
+                  ? row.config.locationTitle
+                    ? `Standort: ${row.config.locationTitle}`
+                    : 'Verbunden, Standort noch auswählen'
+                  : null,
       };
     });
   };
@@ -376,7 +380,7 @@ export async function systemRoutes(app: FastifyInstance) {
     const a = requireRole(req, ['owner', 'admin']);
     const provider = (req.params as { provider: string }).provider;
     if (!PROVIDERS.some((p) => p.provider === provider)) throw notFound('Integration');
-    if (provider === 'google_calendar') {
+    if (provider === 'google_calendar' || provider === 'google_business') {
       // Give the access back at Google too, so the business's account no longer lists BusinessPilot.
       const [row] = await db.select().from(integrations).where(and(eq(integrations.tenantId, a.tenantId), eq(integrations.provider, provider)));
       if (row?.config.refreshToken) await revokeGoogleToken(decrypt(row.config.refreshToken)).catch(() => {});

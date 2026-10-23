@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, CalendarClock, Info, MousePointerClick, Send } from 'lucide-react';
 import { api, type ReviewsData } from '../api';
+import { GoogleReviews } from '../components/GoogleReviews';
 import { Badge, EmptyState, ErrorState, PageHeader, Skeleton, SkeletonTiles, StatTile } from '../components/ui';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { labelChannel, reviewStatus } from '../lib/labels';
@@ -18,6 +19,8 @@ export function ReviewsPage() {
           richtlinienkonform bleiben.
         </span>
       </p>
+      <GoogleReviews />
+      <h2 className="section-title">Bewertungsanfragen</h2>
       {q.isPending && <SkeletonTiles count={3} />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && (

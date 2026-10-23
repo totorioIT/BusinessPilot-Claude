@@ -693,3 +693,14 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
 
 .table-scroll { overflow-x: auto; }
 .webhook-fields { margin: 0; padding-left: 1.1em; overflow-wrap: anywhere; }
+
+/* Google reviews */
+.review-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.review { display: grid; gap: 8px; padding-block: 16px; border-top: 1px solid var(--gray-200); }
+.review:first-child { border-top: 0; padding-top: 0; }
+.review p { margin: 0; overflow-wrap: anywhere; }
+.review__head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.review__reply { padding: 10px 12px; border-left: 3px solid var(--blue-100); background: var(--blue-50); border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 4px; }
+.stars { display: inline-flex; gap: 2px; }
+.star { width: 15px; height: 15px; color: var(--gray-200); }
+.star--on { color: #f5a524; fill: #f5a524; }

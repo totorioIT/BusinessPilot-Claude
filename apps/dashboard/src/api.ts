@@ -416,3 +416,22 @@ export interface GoogleCalendarSetup {
   calendars: { id: string; name: string; primary: boolean }[];
   staff: { id: string; name: string; calendarId: string | null }[];
 }
+
+export interface GoogleReview {
+  id: string;
+  author: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+  reply: { text: string; updatedAt: string | null } | null;
+}
+
+export type GoogleReviewsData =
+  | { connected: false }
+  | { connected: true; location: null }
+  | { connected: true; location: string; reviews: GoogleReview[]; averageRating: number | null; total: number; nextPageToken: string | null };
+
+export interface BusinessLocations {
+  locations: { id: string; title: string; address: string | null }[];
+  selected: string | null;
+}

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, KeyRound, Link2, RefreshCw, Unlink } from 'lucide-react';
-import { api, type GoogleCalendarSetup, type Integration, type WebhookLogEntry } from '../api';
+import { api, type BusinessLocations, type GoogleCalendarSetup, type Integration, type WebhookLogEntry } from '../api';
 import { CopyButton } from '../components/CopyButton';
 import { Badge, EmptyState, ErrorState, FormError, PageHeader, Skeleton, Spinner } from '../components/ui';
 
@@ -23,9 +23,9 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
   // WhatsApp goes live with the tenant's own 360dialog key; the platform-wide model is set up by the admin.
   const needsKey = it.provider === 'whatsapp_360dialog' && it.mode !== 'live';
   // Google Calendar connects through Google's own consent screen.
-  const needsGoogle = it.provider === 'google_calendar' && it.mode !== 'live';
+  const needsGoogle = (it.provider === 'google_calendar' || it.provider === 'google_business') && it.mode !== 'live';
   const google = useMutation({
-    mutationFn: () => api.post<{ url: string }>('/integrations/google_calendar/start'),
+    mutationFn: () => api.post<{ url: string }>(`/integrations/${it.provider}/start`),
     onSuccess: (r) => window.location.assign(r.url),
   });
   const platformManaged = it.provider === 'openai';
@@ -72,6 +72,7 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
         </>
       )}
       {it.provider === 'google_calendar' && it.mode === 'live' && connected && <StaffCalendars />}
+      {it.provider === 'google_business' && it.mode === 'live' && connected && <BusinessLocationPicker />}
       {!platformManaged && !needsKey && !needsGoogle && (
         <div className="integration__actions">
           {connected ? (
@@ -196,6 +197,55 @@ function StaffCalendars() {
   );
 }
 
+/** Which Google location's reviews BusinessPilot shows; only asked when the account manages several. */
+function BusinessLocationPicker() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['google-locations'], queryFn: () => api.get<BusinessLocations>('/integrations/google_business/locations') });
+  const [choice, setChoice] = useState('');
+  useEffect(() => {
+    if (q.data) setChoice(q.data.selected ?? '');
+  }, [q.data]);
+  const save = useMutation({
+    mutationFn: () => api.put('/integrations/google_business/location', { locationId: choice }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['google-locations'] });
+      qc.invalidateQueries({ queryKey: ['integrations'] });
+      qc.invalidateQueries({ queryKey: ['reviews', 'google'] });
+    },
+  });
+  if (q.isPending) return <Skeleton lines={1} />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+  if (q.data.locations.length <= 1 && q.data.selected) return null;
+  return (
+    <form
+      className="form stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.mutate();
+      }}
+    >
+      <div className="field">
+        <label htmlFor="gbp-location">Standort</label>
+        <select id="gbp-location" value={choice} onChange={(e) => setChoice(e.target.value)}>
+          <option value="">Bitte auswählen</option>
+          {q.data.locations.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.title}
+              {l.address ? ` (${l.address})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+      <FormError error={save.error} />
+      <div className="integration__actions">
+        <button type="submit" className="btn btn--outline btn--sm" disabled={save.isPending || !choice || choice === q.data.selected}>
+          {save.isPending ? <Spinner /> : <Check aria-hidden="true" />} Standort speichern
+        </button>
+      </div>
+    </form>
+  );
+}
+
 const timeFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 function LogRow({ e }: { e: WebhookLogEntry }) {
@@ -273,7 +323,7 @@ export function IntegrationsPage() {
   const keyName = key ? q.data?.find((i) => i.provider === key.provider)?.name ?? key.provider : '';
   // Google sends the browser back with the outcome in the address; show it once, then tidy the URL.
   const [params, setParams] = useSearchParams();
-  const [googleResult] = useState(() => ({ ok: params.get('google') === 'connected', error: params.get('google_error') }));
+  const [googleResult] = useState(() => ({ ok: params.get('google') === 'connected', provider: params.get('provider'), error: params.get('google_error') }));
   useEffect(() => {
     if (params.has('google') || params.has('google_error')) setParams({}, { replace: true });
   }, [params, setParams]);
@@ -284,13 +334,13 @@ export function IntegrationsPage() {
       {googleResult.ok && (
         <p className="notice" role="status">
           <Check aria-hidden="true" />
-          <span>Google Kalender ist verbunden. Ordnen Sie unten auf der Karte die Kalender Ihren Mitarbeitern zu.</span>
+          <span>{googleResult.provider === 'google_business' ? 'Google Unternehmensprofil ist verbunden. Die Bewertungen finden Sie unter Bewertungen.' : 'Google Kalender ist verbunden. Ordnen Sie unten auf der Karte die Kalender Ihren Mitarbeitern zu.'}</span>
         </p>
       )}
       {googleResult.error && (
         <p className="notice notice--warn" role="alert">
           <AlertTriangle aria-hidden="true" />
-          <span>Google Kalender wurde nicht verbunden: {googleResult.error}</span>
+          <span>Google wurde nicht verbunden. {googleResult.error}</span>
         </p>
       )}
       {key && (

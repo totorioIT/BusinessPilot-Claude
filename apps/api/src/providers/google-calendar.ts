@@ -15,12 +15,12 @@ const API = 'https://www.googleapis.com/calendar/v3';
 
 export type GoogleClient = { clientId: string; clientSecret: string; redirectUri: string };
 
-export function googleAuthUrl(client: GoogleClient, state: string): string {
+export function googleAuthUrl(client: GoogleClient, state: string, scopes: string[] = GOOGLE_SCOPES): string {
   const q = new URLSearchParams({
     client_id: client.clientId,
     redirect_uri: client.redirectUri,
     response_type: 'code',
-    scope: GOOGLE_SCOPES.join(' '),
+    scope: scopes.join(' '),
     access_type: 'offline',
     // Without prompt=consent Google sends no refresh token when the account connected before.
     prompt: 'consent',
@@ -60,7 +60,7 @@ export async function revokeGoogleToken(refreshToken: string): Promise<void> {
 // Access tokens live for an hour; keep them per refresh token so a busy day doesn't refresh on every call.
 const accessCache = new Map<string, { token: string; until: number }>();
 
-async function accessToken(client: GoogleClient, refreshToken: string): Promise<string> {
+export async function accessToken(client: GoogleClient, refreshToken: string): Promise<string> {
   const hit = accessCache.get(refreshToken);
   if (hit && hit.until > Date.now()) return hit.token;
   const t = await tokenRequest({ refresh_token: refreshToken, client_id: client.clientId, client_secret: client.clientSecret, grant_type: 'refresh_token' });

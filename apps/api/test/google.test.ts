@@ -85,7 +85,7 @@ test('a business connects its Google account through the consent screen', async 
 
   const ok = await callback(`code=good&state=${state}`);
   assert.equal(ok.statusCode, 302);
-  assert.equal(ok.headers.location, '/integrations?google=connected');
+  assert.equal(ok.headers.location, '/integrations?google=connected&provider=google_calendar');
   const list = await t.api('GET', '/integrations');
   const item = list.body.find((i: any) => i.provider === 'google_calendar');
   assert.equal(item.mode, 'live');
