@@ -17,6 +17,7 @@ import { systemRoutes } from './routes/system.js';
 import { voiceRoutes } from './routes/voice.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { googleRoutes } from './routes/google.js';
+import { adminRoutes } from './routes/admin.js';
 
 export type AppOptions = {
   db: Db;
@@ -70,9 +71,10 @@ export async function buildApp(opts: AppOptions) {
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
-      .innerJoin(memberships, and(eq(memberships.userId, sessions.userId), eq(memberships.tenantId, sessions.tenantId)))
+      .leftJoin(memberships, and(eq(memberships.userId, sessions.userId), eq(memberships.tenantId, sessions.tenantId)))
       .where(and(eq(sessions.id, sha256(token)), gt(sessions.expiresAt, new Date())));
-    if (row) req.auth = row;
+    // Platform admins may open any tenant for support; they act there with owner rights.
+    if (row && (row.role || row.isPlatformAdmin)) req.auth = { ...row, role: row.role ?? 'owner', support: !row.role };
   });
 
   // Basic CSRF protection for cookie-authenticated writes: browsers always send Origin on
@@ -97,6 +99,7 @@ export async function buildApp(opts: AppOptions) {
   await app.register(voiceRoutes, { prefix: '/api/voice' });
   await app.register(webhookRoutes, { prefix: '/api/webhooks' });
   await app.register(googleRoutes, { prefix: '/api' });
+  await app.register(adminRoutes, { prefix: '/api' });
 
   if (opts.dashboardDist && existsSync(opts.dashboardDist)) {
     await app.register(fastifyStatic, { root: path.resolve(opts.dashboardDist), wildcard: false });

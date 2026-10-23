@@ -704,3 +704,22 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
 .stars { display: inline-flex; gap: 2px; }
 .star { width: 15px; height: 15px; color: var(--gray-200); }
 .star--on { color: #f5a524; fill: #f5a524; }
+
+/* Support-Zugriff und Betriebswechsel */
+.support-banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 10px 28px; background: var(--amber-50); border-bottom: 1px solid var(--amber-100);
+  color: var(--navy-800); font-size: 0.875rem;
+}
+.support-banner > svg { width: 18px; height: 18px; color: var(--amber-700); flex: none; }
+.support-banner > span { flex: 1 1 260px; min-width: 0; }
+@media (max-width: 900px) { .support-banner { padding: 10px 16px; } }
+.tenant-switch {
+  width: 100%; padding: 8px 10px; border-radius: var(--radius); font: inherit; font-size: 0.8125rem;
+  background: rgba(255, 255, 255, 0.06); color: #fff; border: 1px solid var(--navy-line);
+}
+.tenant-switch option { color: var(--navy-800); background: #fff; }
+.one-time {
+  display: grid; gap: 8px; padding: 14px; border-radius: var(--radius);
+  background: var(--green-50, #ecfdf5); border: 1px solid var(--green-100, #d1fae5); font-size: 0.875rem;
+}

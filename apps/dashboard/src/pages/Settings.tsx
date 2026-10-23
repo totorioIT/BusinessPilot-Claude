@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check } from 'lucide-react';
-import { api, type CompanySettings, type HoursEntry, type TeamData } from '../api';
+import { Check, KeyRound, Trash2, UserPlus } from 'lucide-react';
+import { api, type CompanySettings, type HoursEntry, type NewAccess, type Role, type TeamData } from '../api';
+import { useMe } from '../auth';
+import { OneTimeAccess } from '../components/OneTimeAccess';
 import { Badge, ErrorState, FormError, Skeleton, Spinner, PageHeader } from '../components/ui';
 import { roleLabel, weekdays } from '../lib/labels';
 
@@ -9,6 +11,7 @@ const tabs = [
   { key: 'company', label: 'Unternehmen' },
   { key: 'hours', label: 'Geschäftszeiten' },
   { key: 'team', label: 'Team' },
+  { key: 'account', label: 'Konto' },
   { key: 'privacy', label: 'Datenschutz' },
 ] as const;
 type TabKey = (typeof tabs)[number]['key'];
@@ -193,8 +196,72 @@ function HoursTab() {
   );
 }
 
+function InviteForm() {
+  const qc = useQueryClient();
+  const empty = { name: '', email: '', role: 'staff' as Exclude<Role, 'owner'> };
+  const [f, setF] = useState(empty);
+  const [created, setCreated] = useState<{ access: NewAccess; name: string } | null>(null);
+  const invite = useMutation({
+    mutationFn: () => api.post<NewAccess>('/settings/team/users', f),
+    onSuccess: (r) => {
+      setCreated({ access: r, name: f.name });
+      setF(empty);
+      qc.invalidateQueries({ queryKey: ['settings', 'team'] });
+    },
+  });
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    setCreated(null);
+    invite.mutate();
+  }
+  return (
+    <section className="card card--pad stack" aria-labelledby="team-invite-h">
+      <h2 id="team-invite-h" className="section-title">
+        <UserPlus aria-hidden="true" /> Zugang für Mitarbeiter anlegen
+      </h2>
+      <form className="form" onSubmit={submit}>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="inv-name">Name</label>
+            <input id="inv-name" required minLength={2} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoComplete="off" />
+          </div>
+          <div className="field">
+            <label htmlFor="inv-email">E-Mail (Login)</label>
+            <input id="inv-email" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="off" />
+          </div>
+          <div className="field">
+            <label htmlFor="inv-role">Rolle</label>
+            <select id="inv-role" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as typeof f.role })}>
+              <option value="staff">Mitarbeiter (Posteingang, Kunden, Termine)</option>
+              <option value="admin">Admin (zusätzlich Einstellungen und Integrationen)</option>
+            </select>
+          </div>
+        </div>
+        <FormError error={invite.error} />
+        <div className="form-actions">
+          <button type="submit" className="btn btn--primary" disabled={invite.isPending}>
+            {invite.isPending ? <Spinner /> : <UserPlus aria-hidden="true" />} Zugang anlegen
+          </button>
+        </div>
+      </form>
+      {created && <OneTimeAccess access={created.access} name={created.name} />}
+    </section>
+  );
+}
+
 function TeamTab() {
+  const me = useMe();
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ['settings', 'team'], queryFn: () => api.get<TeamData>('/settings/team') });
+  const canManage = me.role === 'owner' || me.role === 'admin';
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const remove = useMutation({
+    mutationFn: (userId: string) => api.del(`/settings/team/users/${userId}`),
+    onSuccess: () => {
+      setConfirm(null);
+      qc.invalidateQueries({ queryKey: ['settings', 'team'] });
+    },
+  });
   if (q.isPending) return <Loading />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
   return (
@@ -209,6 +276,11 @@ function TeamTab() {
               <th scope="col">Name</th>
               <th scope="col">E-Mail</th>
               <th scope="col">Rolle</th>
+              {canManage && (
+                <th scope="col">
+                  <span className="sr-only">Aktion</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -221,11 +293,33 @@ function TeamTab() {
                   {u.email}
                 </td>
                 <td data-label="Rolle">{roleLabel[u.role] ?? u.role}</td>
+                {canManage && (
+                  <td data-label="">
+                    {u.id === me.user.id || (u.role === 'owner' && me.role !== 'owner') ? null : confirm === u.id ? (
+                      <span className="form-actions">
+                        <button type="button" className="btn btn--sm btn--ghost-danger" onClick={() => remove.mutate(u.id)} disabled={remove.isPending}>
+                          {remove.isPending ? <Spinner /> : null} Wirklich entfernen
+                        </button>
+                        <button type="button" className="btn btn--sm btn--outline" onClick={() => setConfirm(null)}>
+                          Abbrechen
+                        </button>
+                      </span>
+                    ) : (
+                      <button type="button" className="btn btn--sm btn--outline" onClick={() => setConfirm(u.id)}>
+                        <Trash2 aria-hidden="true" /> Zugang entfernen
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
+        <div className="card--pad-x">
+          <FormError error={remove.error} />
+        </div>
       </section>
+      {canManage && <InviteForm />}
       <section className="card" aria-labelledby="team-staff-h">
         <h2 id="team-staff-h" className="card-title card--pad-x">
           Mitarbeiter für Termine
@@ -253,8 +347,60 @@ function TeamTab() {
           </tbody>
         </table>
       </section>
-      <p className="muted small">Änderungen am Team nimmt derzeit der BusinessPilot-Support für Sie vor.</p>
+      <p className="muted small">Mitarbeiter für Termine pflegt derzeit der BusinessPilot-Support für Sie.</p>
     </div>
+  );
+}
+
+function AccountTab() {
+  const me = useMe();
+  const [f, setF] = useState({ current: '', next: '', repeat: '' });
+  const [saved, setSaved] = useState(false);
+  const change = useMutation({
+    mutationFn: () => api.post('/auth/password', { current: f.current, next: f.next }),
+    onSuccess: () => {
+      setF({ current: '', next: '', repeat: '' });
+      setSaved(true);
+    },
+  });
+  const mismatch = f.repeat !== '' && f.next !== f.repeat;
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    setSaved(false);
+    if (!mismatch) change.mutate();
+  }
+  return (
+    <form className="card card--pad form stack" onSubmit={submit}>
+      <h2 className="section-title">
+        <KeyRound aria-hidden="true" /> Passwort ändern
+      </h2>
+      <p className="muted small">
+        Angemeldet als {me.user.name} ({me.user.email}). Nach der Änderung werden Sie auf allen anderen Geräten abgemeldet.
+      </p>
+      <div className="form-grid">
+        <div className="field field--full">
+          <label htmlFor="pw-current">Aktuelles Passwort</label>
+          <input id="pw-current" type="password" required autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
+        </div>
+        <div className="field">
+          <label htmlFor="pw-next">Neues Passwort</label>
+          <input id="pw-next" type="password" required minLength={10} autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
+          <p className="field__hint">Mindestens 10 Zeichen.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="pw-repeat">Neues Passwort wiederholen</label>
+          <input id="pw-repeat" type="password" required autoComplete="new-password" value={f.repeat} onChange={(e) => setF({ ...f, repeat: e.target.value })} />
+          {mismatch && <p className="form-error">Die beiden Passwörter stimmen nicht überein.</p>}
+        </div>
+      </div>
+      <FormError error={change.error} />
+      <div className="form-actions">
+        <button type="submit" className="btn btn--primary" disabled={change.isPending || mismatch}>
+          {change.isPending ? <Spinner /> : <Check aria-hidden="true" />} Passwort ändern
+        </button>
+        <Saved show={saved} />
+      </div>
+    </form>
   );
 }
 
@@ -287,7 +433,7 @@ export function SettingsPage() {
   const [tab, setTab] = useState<TabKey>('company');
   return (
     <div className="stack-lg">
-      <PageHeader title="Einstellungen" subtitle="Unternehmen, Geschäftszeiten, Team und Datenschutz." />
+      <PageHeader title="Einstellungen" subtitle="Unternehmen, Geschäftszeiten, Team, Konto und Datenschutz." />
       <div className="tabs" role="tablist" aria-label="Einstellungsbereiche">
         {tabs.map((t) => (
           <button
@@ -317,6 +463,7 @@ export function SettingsPage() {
         {tab === 'company' && <CompanyTab />}
         {tab === 'hours' && <HoursTab />}
         {tab === 'team' && <TeamTab />}
+        {tab === 'account' && <AccountTab />}
         {tab === 'privacy' && <PrivacyTab />}
       </div>
     </div>

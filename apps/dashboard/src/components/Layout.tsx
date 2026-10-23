@@ -7,6 +7,7 @@ import {
   CheckSquare,
   FileText,
   Inbox,
+  LifeBuoy,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -77,6 +78,62 @@ const sections: NavSection[] = [
     ],
   },
 ];
+
+/** Zeigt dem Plattform-Admin, dass er gerade im Bereich eines Kunden arbeitet. */
+function SupportBanner() {
+  const { me, switchTenant } = useAuth();
+  const [busy, setBusy] = useState(false);
+  if (!me?.support) return null;
+  const home = me.tenants[0];
+  async function back() {
+    if (!home) return;
+    setBusy(true);
+    try {
+      await switchTenant(home.id, '/admin');
+    } catch {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="support-banner" role="status">
+      <LifeBuoy aria-hidden="true" />
+      <span>
+        Sie sehen den Bereich von <strong>{me.tenant.name}</strong> als Support. Alles, was Sie hier ändern, gilt für diesen Kunden.
+      </span>
+      {home && (
+        <button type="button" className="btn btn--sm btn--outline" onClick={back} disabled={busy}>
+          Zurück zu {home.name}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Auswahl des Betriebs, wenn ein Benutzer Zugang zu mehreren hat. */
+function TenantSwitcher() {
+  const { me, switchTenant } = useAuth();
+  if (!me || me.tenants.length < 2) return <p className="sidebar__tenant">{me?.tenant.name}</p>;
+  return (
+    <div className="sidebar__tenant">
+      <label htmlFor="tenant-switch" className="sr-only">
+        Betrieb wechseln
+      </label>
+      <select
+        id="tenant-switch"
+        className="tenant-switch"
+        value={me.support ? '' : me.tenant.id}
+        onChange={(e) => void switchTenant(e.target.value)}
+      >
+        {me.support && <option value="">{me.tenant.name} (Support)</option>}
+        {me.tenants.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function TopSearch() {
   const navigate = useNavigate();
@@ -177,7 +234,7 @@ export function Layout() {
             </div>
           ))}
         </nav>
-        <p className="sidebar__tenant">{me.tenant.name}</p>
+        <TenantSwitcher />
       </aside>
       <div className="backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
 
@@ -205,13 +262,14 @@ export function Layout() {
             </div>
             <div className="topbar__user-text">
               <span className="topbar__name">{me.user.name}</span>
-              <span className="topbar__role">{roleLabel[me.role] ?? me.role}</span>
+              <span className="topbar__role">{me.support ? 'Support' : (roleLabel[me.role] ?? me.role)}</span>
             </div>
             <button type="button" className="icon-btn" onClick={onLogout} aria-label="Abmelden" title="Abmelden">
               <LogOut aria-hidden="true" />
             </button>
           </div>
         </header>
+        <SupportBanner />
         <main id="main" className="content" tabIndex={-1}>
           <Outlet />
         </main>

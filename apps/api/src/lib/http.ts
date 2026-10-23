@@ -17,6 +17,8 @@ export type AuthContext = {
   role: 'owner' | 'admin' | 'staff';
   userName: string;
   isPlatformAdmin: boolean;
+  /** A platform admin looking at a tenant they don't belong to (support access). */
+  support: boolean;
 };
 
 declare module 'fastify' {

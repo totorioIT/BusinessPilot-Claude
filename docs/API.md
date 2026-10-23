@@ -17,8 +17,12 @@ Conventions
 | POST | /auth/login | `{email, password}` | `Me` |
 | POST | /auth/logout | – | `{ok:true}` |
 | GET | /auth/me | – | `Me` |
+| POST | /auth/tenant | `{tenantId}` | `Me` for the new tenant (403 unless member or platform admin) |
+| POST | /auth/password | `{current, next}` (min 10) | `{ok:true}`; signs out the user's other sessions |
 
-`Me = { user:{id,name,email,isPlatformAdmin}, tenant:{id,name,industry,timezone}, role:'owner'|'admin'|'staff', ai:{name} }`
+`Me = { user:{id,name,email,isPlatformAdmin}, tenant:{id,name,industry,timezone}, role:'owner'|'admin'|'staff', support:boolean, tenants:[{id,name,role}], ai:{name} }`
+
+A session belongs to one tenant at a time. `POST /auth/tenant` switches it. A platform admin may open any tenant: they act there with owner rights, `support` is true, and the tenant's activity log records the access. `tenants` lists only real memberships.
 
 ## Dashboard
 `GET /dashboard?days=30` →
@@ -111,6 +115,9 @@ All numbers come from the same event set, so tiles, bars and summary always agre
 `GET /settings/hours` / `PUT` `[{day:1..7, open:'HH:MM', close:'HH:MM'}]`
 `GET /settings/ai` / `PUT` `{name, language, tone, greeting, autonomy:'assist'|'semi'|'autopilot', escalation}`
 `GET /settings/team` → `{ users:[{id,name,email,role}], staff:[{id,name,skills,active}] }`
+`POST /settings/team/users {name, email, role:'admin'|'staff'}` (owner/admin) → `{userId, email, startPassword|null}`. A new account gets a start password returned exactly once; an existing e-mail just gains access and keeps its password. 400 `already_member` if it already has access.
+`PATCH /settings/team/users/:userId {role}` (owner only, not self)
+`DELETE /settings/team/users/:userId` (owner/admin; not self; only an owner removes an owner) removes the access and ends that user's sessions in this tenant.
 
 ## Integrations
 `GET /integrations` → `[{provider, name, description, category, mode:'sandbox'|'live', status:'connected'|'disconnected'|'error', lastError, webhookUrl|null, detail|null}]`. `openai` is managed by the platform admin and shows as connected once a model is saved.
@@ -124,6 +131,9 @@ Providers: `fonio`, `whatsapp_360dialog`, `google_calendar`, `microsoft_365`, `g
 ## Platform admin (users with isPlatformAdmin)
 `GET /admin/google` → `{configured, clientId, secretHint, redirectUri, updatedAt, canStoreSecrets}`; `PUT /admin/google {clientId, clientSecret?}`; `DELETE /admin/google`. The OAuth client of the operator's Google Cloud project, shared by all tenants for Google Calendar (and later Google reviews).
 `GET /admin/tenants` → `{ stats:{tenants, users, active}, items:[{id, name, industry, plan, status, users, calls, chats, createdAt}] }`
+`POST /admin/tenants {name, industry, plan?:'start'|'business'|'autopilot', owner:{name, email}}` → 201 `{id, name, owner:{email, startPassword|null}}`. New tenants start as `trial` with autonomy `assist` and Mon–Fri 08:00–17:00. Owner access works like the team invite (existing e-mail gains access, otherwise a one-time start password).
+`PATCH /admin/tenants/:id {status?:'trial'|'active'|'paused', plan?}` (status is informational for now; it does not block logins).
+`GET /admin/industries` → `{industries, plans}`
 
 LLM account shared by all tenants (OpenAI-compatible, default IONOS AI Model Hub). The token is write-only; responses carry only `tokenHint` (last four characters).
 | Method | Path | Body → Response |

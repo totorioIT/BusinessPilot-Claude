@@ -9,6 +9,11 @@ interface AuthValue {
   error: Error | null;
   login: (email: string, password: string) => Promise<Me>;
   logout: () => Promise<void>;
+  /**
+   * Wechselt den Betrieb dieser Sitzung und lädt die Seite neu, damit keine Daten des
+   * vorigen Betriebs im Speicher bleiben.
+   */
+  switchTenant: (tenantId: string, goTo?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -49,6 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: meQuery.isPending,
     error: meQuery.error,
     login: (email, password) => loginMut.mutateAsync({ email, password }),
+    switchTenant: async (tenantId, goTo = '/') => {
+      await api.post<Me>('/auth/tenant', { tenantId });
+      window.location.assign(goTo);
+    },
     logout: async () => {
       try {
         await api.post('/auth/logout');

@@ -75,6 +75,10 @@ export interface Me {
   user: { id: string; name: string; email: string; isPlatformAdmin: boolean };
   tenant: { id: string; name: string; industry: string; timezone: string };
   role: Role;
+  /** Plattform-Admin sieht einen Betrieb, in dem er selbst kein Mitglied ist. */
+  support: boolean;
+  /** Alle Betriebe, in denen der Benutzer Mitglied ist. */
+  tenants: { id: string; name: string; role: Role }[];
   ai: { name: string };
 }
 
@@ -369,6 +373,13 @@ export interface WebhookLogEntry {
   status: number;
   fields: Record<string, string>;
   note: string | null;
+}
+
+export interface NewAccess {
+  userId?: string;
+  email: string;
+  /** Nur bei neu angelegten Benutzern, wird genau einmal angezeigt. */
+  startPassword: string | null;
 }
 
 export interface AdminTenants {
