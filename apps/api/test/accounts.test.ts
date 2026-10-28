@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { eq } from 'drizzle-orm';
 import * as s from '../src/db/schema.js';
-import { DEMO_EMAIL } from '../src/db/seed.js';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../src/db/seed.js';
 import { setup } from './helpers.js';
 
 let t: Awaited<ReturnType<typeof setup>>;
@@ -117,4 +117,23 @@ test('changing the password signs out other sessions and keeps this one', async 
   assert.equal((await t.api('GET', '/auth/me', undefined, first.cookie)).status, 401);
   assert.equal((await t.api('GET', '/auth/me', undefined, second.cookie)).status, 200);
   assert.equal((await t.login(kundeLogin.email, 'NeuesPasswort2026')).res.statusCode, 200);
+});
+
+test('an account locks after ten wrong passwords, even when they come from different addresses', async () => {
+  const [u] = await t.db.select().from(s.users).where(eq(s.users.email, DEMO_EMAIL));
+  const email = 'gesperrt@example.de';
+  await t.db.insert(s.users).values({ id: 'usr_lockout', email, name: 'Gesperrt', passwordHash: u.passwordHash });
+  const attempt = (i: number, pw: string) =>
+    t.app.inject({ method: 'POST', url: '/api/auth/login', payload: { email, password: pw }, remoteAddress: `10.0.0.${i}` });
+  for (let i = 1; i <= 10; i++) assert.equal((await attempt(i, `falsch-${i}`)).statusCode, 401);
+  const locked = await attempt(11, DEMO_PASSWORD);
+  assert.equal(locked.statusCode, 429);
+  assert.equal(locked.json().error, 'locked', 'even the right password waits until the lock expires');
+});
+
+test('every response carries the browser security headers', async () => {
+  const res = await t.app.inject({ method: 'GET', url: '/api/health' });
+  assert.equal(res.headers['x-frame-options'], 'DENY');
+  assert.equal(res.headers['x-content-type-options'], 'nosniff');
+  assert.match(String(res.headers['content-security-policy']), /frame-ancestors 'none'/);
 });

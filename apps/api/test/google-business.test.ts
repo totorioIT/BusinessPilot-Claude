@@ -62,7 +62,7 @@ const connect = async () => {
   const start = await t.api('POST', '/integrations/google_business/start');
   const url = new URL(start.body.url);
   assert.equal(url.searchParams.get('scope'), 'https://www.googleapis.com/auth/business.manage');
-  return t.app.inject({ method: 'GET', url: `/api/integrations/google/callback?code=c&state=${url.searchParams.get('state')}` });
+  return t.app.inject({ method: 'GET', url: `/api/integrations/google/callback?code=c&state=${url.searchParams.get('state')}`, headers: { cookie: t.cookie } });
 };
 
 test('before connecting, the reviews page knows Google is not connected', async () => {

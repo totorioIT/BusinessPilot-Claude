@@ -50,7 +50,7 @@ after(async () => {
   await t.close();
 });
 
-const callback = (query: string) => t.app.inject({ method: 'GET', url: `/api/integrations/google/callback?${query}` });
+const callback = (query: string, cookie = t.cookie) => t.app.inject({ method: 'GET', url: `/api/integrations/google/callback?${query}`, headers: { cookie } });
 const errorOf = (res: { headers: Record<string, unknown> }) => new URL(String(res.headers.location), 'http://x').searchParams.get('google_error');
 
 test('without the platform OAuth client, connecting explains what is missing', async () => {
@@ -82,6 +82,7 @@ test('a business connects its Google account through the consent screen', async 
   assert.match(errorOf(await callback(`code=good&state=${state}x`))!, /abgelaufen/, 'a tampered state is refused');
   assert.match(errorOf(await callback(`error=access_denied&state=${state}`))!, /abgelehnt/);
   assert.match(errorOf(await callback(`code=bad&state=${state}`))!, /widerrufen oder er ist abgelaufen/);
+  assert.match(errorOf(await callback(`code=good&state=${state}`, ''))!, /anmelden/, 'someone not signed in cannot finish the connection');
 
   const ok = await callback(`code=good&state=${state}`);
   assert.equal(ok.statusCode, 302);

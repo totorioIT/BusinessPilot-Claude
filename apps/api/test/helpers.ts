@@ -32,7 +32,7 @@ export async function setup() {
     await app.close();
     await pool.end();
   };
-  return { app, db, tenantId, api, voice, login, close };
+  return { app, db, tenantId, cookie, api, voice, login, close };
 }
 
 /** Next weekday (Mon–Fri) at least `minDays` ahead, as YYYY-MM-DD in Berlin time. */

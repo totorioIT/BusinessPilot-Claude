@@ -176,6 +176,26 @@ describe('fonio voice flow', () => {
     assert.deepEqual(detail.body.call.actions, ['Kontakt erkannt']);
   });
 
+  it('tells a caller who only names a customer nothing about that customer\'s vehicles', async () => {
+    const own = await t.voice('/fonio/inbound', { fromNumber: '0170 1234567' });
+    const mine = await t.voice('/tools/customer/lookup', { session_token: own.body.bp_session_token, name: 'Max Müller' });
+    assert.equal(mine.body.verified, true);
+    assert.equal(mine.body.vehicles[0].plate, 'M-MM 1234');
+
+    const stranger = await t.voice('/fonio/inbound', { fromNumber: '+49 157 0000099' });
+    const token = stranger.body.bp_session_token;
+    const byName = await t.voice('/tools/customer/lookup', { session_token: token, name: 'Max Müller' });
+    assert.equal(byName.body.result, 'found');
+    assert.equal(byName.body.verified, false);
+    assert.deepEqual(byName.body.vehicles, []);
+    const byPhone = await t.voice('/tools/customer/lookup', { session_token: token, phone: '+49 170 1234567' });
+    assert.equal(byPhone.body.verified, false, 'a number the caller only says is not their calling number');
+    assert.deepEqual(byPhone.body.vehicles, []);
+    const byPlate = await t.voice('/tools/customer/lookup', { session_token: token, plate: 'm-mm 1234' });
+    assert.deepEqual(byPlate.body.vehicles.map((v: { plate: string }) => v.plate), ['M-MM 1234'], 'only the plate the caller named');
+    for (const session_token of [own.body.bp_session_token, token]) await t.voice('/fonio/post-call', { session_token, summary: 'Identität geprüft' });
+  });
+
   it('creates a new customer for an unknown caller when booking', async () => {
     const inbound = await t.voice('/fonio/inbound', { fromNumber: '+49 157 0000001' });
     assert.equal(inbound.body.customer_known, false);
