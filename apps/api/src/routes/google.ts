@@ -98,7 +98,10 @@ export async function googleRoutes(app: FastifyInstance) {
     const back = (params: Record<string, string>) => reply.redirect(`/integrations?${new URLSearchParams(params)}`);
     const state = q.state ? readOauthState(q.state) : null;
     if (!state) return back({ google_error: 'Die Anmeldung bei Google ist abgelaufen. Bitte noch einmal auf „Mit Google verbinden“ klicken.' });
-    if (req.auth && (req.auth.tenantId !== state.tenantId || req.auth.userId !== state.userId)) {
+    // Only the person who started the connection may finish it, in the same browser: otherwise a
+    // link with someone else's state could attach the clicker's Google account to that business.
+    if (!req.auth) return back({ google_error: 'Bitte zuerst im Dashboard anmelden und dann noch einmal „Mit Google verbinden“ klicken.' });
+    if (req.auth.tenantId !== state.tenantId || req.auth.userId !== state.userId) {
       return back({ google_error: 'Die Anmeldung gehört zu einem anderen Konto.' });
     }
     if (q.error || !q.code) return back({ google_error: q.error === 'access_denied' ? 'Der Zugriff wurde bei Google abgelehnt.' : `Google meldet: ${q.error ?? 'kein Code'}` });
@@ -128,7 +131,7 @@ export async function googleRoutes(app: FastifyInstance) {
       await recordEvent(db, {
         tenantId: state.tenantId,
         type: 'integration.connected',
-        actor: { type: 'user', id: state.userId, name: req.auth?.userName ?? null },
+        actor: { type: 'user', id: state.userId, name: req.auth.userName },
         summary,
       });
       return back({ google: 'connected', provider: state.provider });

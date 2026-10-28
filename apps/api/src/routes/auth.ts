@@ -12,6 +12,25 @@ import { forbidden, notFound } from '../lib/errors.js';
 export const SESSION_COOKIE = 'bp_session';
 const SESSION_DAYS = 14;
 
+// Guessing one account's password from many IPs is stopped per e-mail address: after
+// MAX_FAILURES wrong passwords the account refuses logins until the window has passed.
+const MAX_FAILURES = 10;
+const FAILURE_WINDOW_MS = 15 * 60_000;
+const failures = new Map<string, { count: number; since: number }>();
+const lockedOut = (email: string) => {
+  const f = failures.get(email);
+  if (f && Date.now() - f.since > FAILURE_WINDOW_MS) failures.delete(email);
+  return (failures.get(email)?.count ?? 0) >= MAX_FAILURES;
+};
+const recordFailure = (email: string) => {
+  const f = failures.get(email) ?? { count: 0, since: Date.now() };
+  failures.set(email, { ...f, count: f.count + 1 });
+  // Bounded memory: the oldest entries go first.
+  if (failures.size > 10_000) failures.delete(failures.keys().next().value!);
+};
+/** Checked against when the e-mail is unknown, so the answer takes as long as for a real account. */
+const dummyHash = hashPassword(newToken());
+
 async function me(app: FastifyInstance, userId: string, tenantId: string) {
   const [user] = await app.db.select().from(users).where(eq(users.id, userId));
   const [tenant] = await app.db.select().from(tenants).where(eq(tenants.id, tenantId));
@@ -40,9 +59,14 @@ export async function authRoutes(app: FastifyInstance) {
     { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const body = parse(z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1).max(200) }), req.body);
+      if (lockedOut(body.email)) throw new HttpError(429, 'locked', 'Zu viele falsche Versuche. Bitte in 15 Minuten erneut versuchen.');
       const [user] = await app.db.select().from(users).where(eq(users.email, body.email));
-      const valid = user ? await verifyPassword(body.password, user.passwordHash) : false;
-      if (!user || !valid) throw new HttpError(401, 'invalid_credentials', 'E-Mail oder Passwort ist falsch.');
+      const valid = await verifyPassword(body.password, user?.passwordHash ?? (await dummyHash));
+      if (!user || !valid) {
+        recordFailure(body.email);
+        throw new HttpError(401, 'invalid_credentials', 'E-Mail oder Passwort ist falsch.');
+      }
+      failures.delete(body.email);
       // Owners land in their own business first; someone in several businesses can switch later.
       const all = await app.db.select().from(memberships).where(eq(memberships.userId, user.id));
       const rank = { owner: 0, admin: 1, staff: 2 };

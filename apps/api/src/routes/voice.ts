@@ -284,8 +284,12 @@ export async function voiceRoutes(app: FastifyInstance) {
     const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, phone: str, name: str, plate: str }).passthrough(), req.body);
     const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
     let rows: (typeof customers.$inferSelect)[] = [];
+    // A name or plate is only what the caller says; only the calling number is checked by the
+    // network. Callers matched by what they say learn nothing they didn't already know.
+    let matchedBy: 'plate' | 'phone' | 'name' = 'plate';
+    let plate: string | null = null;
     if (body.plate) {
-      const plate = body.plate.replace(/[\s-]/g, '').toUpperCase();
+      plate = body.plate.replace(/[\s-]/g, '').toUpperCase();
       const hits = await db
         .select({ customer: customers })
         .from(customerAssets)
@@ -295,19 +299,24 @@ export async function voiceRoutes(app: FastifyInstance) {
     }
     const phone = body.phone ?? session.fromNumber;
     if (rows.length === 0 && phone) {
+      matchedBy = 'phone';
       rows = await db
         .select()
         .from(customers)
         .where(and(eq(customers.tenantId, tenant.id), sql`right(regexp_replace(coalesce(${customers.phone}, ''), '\\D', '', 'g'), 9) = ${phoneKey(phone)}`));
     }
     if (rows.length === 0 && body.name) {
+      matchedBy = 'name';
       rows = await db.select().from(customers).where(and(eq(customers.tenantId, tenant.id), sql`lower(${customers.name}) = lower(${body.name})`));
     }
     if (rows.length !== 1) {
       return { ok: true, result: rows.length === 0 ? 'not_found' : 'ambiguous', spoken_summary: 'Ich konnte Sie leider nicht eindeutig zuordnen. Wie ist Ihr vollständiger Name?' };
     }
     const c = rows[0];
-    const assets = await db.select().from(customerAssets).where(eq(customerAssets.customerId, c.id));
+    const verified = Boolean(session.fromNumber && c.phone && phoneKey(session.fromNumber) === phoneKey(c.phone));
+    const assets = (await db.select().from(customerAssets).where(eq(customerAssets.customerId, c.id))).filter((x) =>
+      verified ? true : matchedBy === 'plate' && (x.identifier ?? '').replace(/[\s-]/g, '').toUpperCase() === plate,
+    );
     await db.update(voiceSessions).set({ customerId: c.id }).where(eq(voiceSessions.id, session.id));
     if (session.conversationId) await db.update(conversations).set({ customerId: c.id, contactName: c.name }).where(eq(conversations.id, session.conversationId));
     return {
@@ -315,6 +324,8 @@ export async function voiceRoutes(app: FastifyInstance) {
       result: 'found',
       customer_id: c.id,
       customer_name: c.name,
+      /** False when the caller's number doesn't belong to this customer: share no further details. */
+      verified,
       vehicles: assets.map((x) => ({ vehicle_id: x.id, label: x.label, plate: x.identifier })),
       spoken_summary: `Ich habe Sie gefunden, ${c.name}.`,
     };

@@ -84,9 +84,20 @@ export async function buildApp(opts: AppOptions) {
     const origin = req.headers.origin;
     if (!origin) return;
     const host = req.headers['x-forwarded-host'] ?? req.headers.host;
-    if (new URL(origin).host !== host) {
+    if (URL.parse(origin)?.host !== host) {
       return reply.status(403).send({ error: 'forbidden', message: 'Ungültige Herkunft der Anfrage.' });
     }
+  });
+
+  // Browser hardening for every response: no framing (clickjacking), no MIME sniffing, no
+  // full URLs leaking to other sites, and HTTPS only once the site runs on HTTPS.
+  app.addHook('onSend', async (req, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (opts.cookieSecure) reply.header('Strict-Transport-Security', 'max-age=31536000');
   });
 
   app.get('/api/health', async () => ({ ok: true, version: process.env.GIT_COMMIT ?? 'dev' }));
