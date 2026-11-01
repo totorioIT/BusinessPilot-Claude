@@ -3,6 +3,7 @@ import type { DbOrTx } from '../db/client.js';
 import { integrations, tenants } from '../db/schema.js';
 import { decrypt } from '../lib/secretbox.js';
 import { liveLlm } from '../services/ai-settings.js';
+import { brevoEmail } from './brevo.js';
 import { dialog360Messaging } from './dialog360.js';
 import { googleCalendar } from './google-calendar.js';
 import { googleClient } from '../services/google-settings.js';
@@ -38,7 +39,7 @@ export type Providers = {
 /**
  * Resolves the providers for one tenant. The LLM is live as soon as a platform admin has saved
  * a model; WhatsApp is live once the tenant has entered a 360dialog key, Google Calendar once the
- * tenant has connected a Google account. Everything else still runs in the sandbox.
+ * tenant has connected a Google account, email once a Brevo key is saved. Everything else still runs in the sandbox.
  */
 export async function providersFor(db: DbOrTx, tenantId: string): Promise<Providers> {
   const rows = await db
@@ -47,6 +48,7 @@ export async function providersFor(db: DbOrTx, tenantId: string): Promise<Provid
     .where(and(eq(integrations.tenantId, tenantId), eq(integrations.mode, 'live'), eq(integrations.status, 'connected')));
   const whatsapp = rows.find((r) => r.provider === 'whatsapp_360dialog');
   const google = rows.find((r) => r.provider === 'google_calendar');
+  const brevo = rows.find((r) => r.provider === 'brevo');
   const client = google ? await googleClient(db) : null;
   const live = await liveLlm(db);
   let calendar = sandboxCalendar;
@@ -65,7 +67,7 @@ export async function providersFor(db: DbOrTx, tenantId: string): Promise<Provid
   }
   return {
     messaging: whatsapp ? dialog360Messaging({ apiKey: decrypt(whatsapp.config.apiKey), testAccount: whatsapp.config.testAccount === 'true' }) : sandboxMessaging,
-    email: sandboxEmail,
+    email: brevo ? brevoEmail({ apiKey: decrypt(brevo.config.apiKey), senderEmail: brevo.config.senderEmail, senderName: brevo.config.senderName }) : sandboxEmail,
     calendar,
     llm: live ? withFallback(live) : sandboxLlm,
     voice: sandboxVoice,

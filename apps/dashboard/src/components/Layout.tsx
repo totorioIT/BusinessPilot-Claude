@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   MessageCircle,
   Phone,
@@ -64,6 +65,7 @@ const sections: NavSection[] = [
     title: 'Automatisierung',
     items: [
       { to: '/automations', label: 'Automationen', icon: Workflow },
+      { to: '/campaigns', label: 'Aktionen', icon: Megaphone },
       { to: '/reviews', label: 'Bewertungen', icon: Star },
     ],
   },

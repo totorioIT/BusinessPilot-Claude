@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, KeyRound, Trash2, UserPlus } from 'lucide-react';
-import { api, type CompanySettings, type HoursEntry, type NewAccess, type Role, type TeamData } from '../api';
+import { api, type CompanySettings, type HoursEntry, type NewAccess, type Role, type ServiceType, type TeamData } from '../api';
 import { useMe } from '../auth';
 import { OneTimeAccess } from '../components/OneTimeAccess';
 import { Badge, ErrorState, FormError, Skeleton, Spinner, PageHeader } from '../components/ui';
@@ -10,6 +10,7 @@ import { roleLabel, weekdays } from '../lib/labels';
 const tabs = [
   { key: 'company', label: 'Unternehmen' },
   { key: 'hours', label: 'Geschäftszeiten' },
+  { key: 'services', label: 'Leistungen' },
   { key: 'team', label: 'Team' },
   { key: 'account', label: 'Konto' },
   { key: 'privacy', label: 'Datenschutz' },
@@ -80,6 +81,11 @@ function CompanyTab() {
         <div className="field">
           <label htmlFor="co-phone">Telefon</label>
           <input id="co-phone" type="tel" value={v.phone ?? ''} onChange={set('phone')} />
+        </div>
+        <div className="field">
+          <label htmlFor="co-email">E-Mail für Kundenantworten</label>
+          <input id="co-email" type="email" placeholder="info@ihr-betrieb.de" value={v.email ?? ''} onChange={set('email')} />
+          <p className="field__hint">Antworten auf Angebote und Terminvorschläge landen in diesem Postfach.</p>
         </div>
         <div className="field">
           <label htmlFor="co-tz">Zeitzone</label>
@@ -193,6 +199,99 @@ function HoursTab() {
         <Saved show={saved} />
       </div>
     </form>
+  );
+}
+
+function ServiceRow({ st }: { st: ServiceType }) {
+  const qc = useQueryClient();
+  const [days, setDays] = useState(st.rebookAfterDays ? String(st.rebookAfterDays) : '');
+  const [saved, setSaved] = useState(false);
+  const m = useMutation({
+    mutationFn: (rebookAfterDays: number | null) => api.patch<ServiceType>(`/service-types/${st.id}`, { rebookAfterDays }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['service-types'] });
+      setSaved(true);
+    },
+  });
+  const value = days.trim() ? Number(days) : null;
+  const changed = value !== (st.rebookAfterDays ?? null);
+  const valid = value === null || (Number.isInteger(value) && value >= 1 && value <= 1095);
+  return (
+    <tr>
+      <td>
+        <strong>{st.name}</strong>
+        <div className="muted small">{st.durationMin} Min.</div>
+      </td>
+      <td>
+        <label className="sr-only" htmlFor={`rb-${st.id}`}>
+          Wiederbuchung für {st.name} nach Tagen
+        </label>
+        <span className="inline-field">
+          <input
+            id={`rb-${st.id}`}
+            type="number"
+            min={1}
+            max={1095}
+            inputMode="numeric"
+            placeholder="aus"
+            value={days}
+            onChange={(e) => {
+              setSaved(false);
+              setDays(e.target.value);
+            }}
+            style={{ width: '6.5rem' }}
+          />
+          <span className="muted small">Tage</span>
+        </span>
+        {m.error && <FormError error={m.error} />}
+      </td>
+      <td className="cell-actions">
+        <button type="button" className="btn btn--outline btn--sm" disabled={!changed || !valid || m.isPending} onClick={() => m.mutate(value)}>
+          {m.isPending && <Spinner />} Speichern
+        </button>
+        <Saved show={saved && !changed} />
+      </td>
+    </tr>
+  );
+}
+
+function ServicesTab() {
+  const q = useQuery({ queryKey: ['service-types'], queryFn: () => api.get<ServiceType[]>('/service-types') });
+  if (q.isPending) return <Loading />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+  return (
+    <div className="card card--pad stack">
+      <div>
+        <h2 className="card-title">Wiederbuchung nach dem Besuch</h2>
+        <p className="muted small">
+          Tragen Sie ein, nach wie vielen Tagen ein Kunde wieder kommen sollte, zum Beispiel Reifenwechsel 180 Tage oder Haarschnitt 42 Tage. BusinessPilot
+          schickt dann eine E-Mail mit zwei freien Terminen. Das passiert nur bei Kunden mit Werbe-Einwilligung und nur, wenn die Automation „Wiederbuchung nach
+          Besuch“ aktiv ist. Leer lassen heißt: keine Erinnerung.
+        </p>
+      </div>
+      {q.data.length === 0 ? (
+        <p className="muted">Noch keine Leistungen angelegt.</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Leistung</th>
+                <th>Wieder buchen nach</th>
+                <th>
+                  <span className="sr-only">Aktion</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.map((st) => (
+                <ServiceRow key={st.id} st={st} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -462,6 +561,7 @@ export function SettingsPage() {
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'company' && <CompanyTab />}
         {tab === 'hours' && <HoursTab />}
+        {tab === 'services' && <ServicesTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'account' && <AccountTab />}
         {tab === 'privacy' && <PrivacyTab />}

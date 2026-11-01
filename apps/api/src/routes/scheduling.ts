@@ -77,7 +77,7 @@ export async function schedulingRoutes(app: FastifyInstance) {
   app.get('/service-types', async (req) => {
     const a = auth(req);
     const rows = await db.select().from(serviceTypes).where(and(eq(serviceTypes.tenantId, a.tenantId), eq(serviceTypes.active, true))).orderBy(asc(serviceTypes.name));
-    return rows.map((s) => ({ id: s.id, code: s.code, name: s.name, durationMin: s.durationMin, bufferMin: s.bufferMin }));
+    return rows.map((s) => ({ id: s.id, code: s.code, name: s.name, durationMin: s.durationMin, bufferMin: s.bufferMin, rebookAfterDays: s.rebookAfterDays }));
   });
 
   app.get('/availability', async (req) => {

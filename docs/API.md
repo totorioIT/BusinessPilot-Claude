@@ -90,6 +90,23 @@ Stages in order: `new` Neue Anfrage, `qualified` Qualifiziert, `appointment` Ter
 `Automation = { id, templateKey, name, description, enabled, runCount, steps:[{type:'trigger'|'wait'|'condition'|'action', label}] }`
 `POST /automations` `{templateKey}` → `Automation` (idempotent, one per template)
 `PATCH /automations/:id` `{enabled}`
+Template `rebooking` (Wiederbuchung): when an appointment is set to `completed` and its service has `rebookAfterDays`, a job runs that many days later. It skips customers who already have an upcoming booked/confirmed appointment and sends an email with up to two free slots of the same service. Marketing purpose: only with email marketing consent (see below).
+
+## Marketing consent, Aktionen and rebooking
+Offers, news and rebooking invitations are advertising (UWG §7). They go **by email only** and only to customers whose email marketing consent is `granted`. WhatsApp marketing needs Meta-approved templates and is not sent yet. Every marketing mail gets the business's name/address, an unsubscribe link and `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers. Without `APP_SECRET` (needed to sign links) nothing is sent.
+
+`GET /customers/:id/consents` → `[{channel:'email'|'whatsapp', status:'granted'|'pending'|'revoked'|'none', source, grantedAt, revokedAt, updatedAt}]`
+`PUT /customers/:id/consents` `{channel, action:'grant'|'revoke'|'request', source?}` → same list. `grant` needs `source` (how the consent can be proven). `request` (email only) sends a double-opt-in mail with a signed link valid 30 days and sets `pending`. Rate limited (30/min). Every change is an event `consent.*`.
+`PATCH /service-types/:id` `{rebookAfterDays: 1..1095 | null}` (owner/admin). `GET /service-types` includes `rebookAfterDays`.
+
+`GET /campaigns` → `{items: Campaign[], emailLive:boolean (Brevo connected), canSend:boolean (APP_SECRET set)}`
+`Campaign = {id, title, subject, body, audience:{serviceTypeId?, visitedWithinDays?}, status:'draft'|'sending'|'sent', recipientCount, sentCount, failedCount, createdAt, sentAt}`
+`POST /campaigns/audience` `{serviceTypeId?, visitedWithinDays?}` → `{count}`
+`POST /campaigns` `{title, subject, body, audience?}` · `PATCH /campaigns/:id` · `DELETE /campaigns/:id` (drafts only, else 409 `campaign_not_draft`)
+`POST /campaigns/:id/send` (owner/admin) → campaign with `status:'sending'`; one job per recipient, 3 s apart; consent is checked again at send time. `{{vorname}}` and `{{name}}` in subject/body are replaced. 400 `no_recipients` when nobody qualifies.
+
+Public pages (no login, signed token `t`, rate limited): `GET /public/unsubscribe?t=` shows a button, `POST` revokes (also the RFC 8058 one-click POST from mail apps). `GET /public/consent/confirm?t=` shows a button, `POST` grants (source records the IP). GET never changes anything because mail scanners open links.
+WhatsApp: a message that is just "STOP" (also "Stopp", "Abmelden") revokes email and WhatsApp marketing consent and gets a confirmation instead of an AI answer.
 
 ## Reviews
 `GET /reviews` → `{ stats:{planned, sent, clicked}, reviewUrlConfigured:boolean, items:[{id, customer:{id,name}|null, channel, status:'planned'|'sent'|'clicked'|'failed', scheduledFor, sentAt, clickedAt}] }`
@@ -111,7 +128,7 @@ Google reviews (live, from the Business Profile API): `GET /reviews/google` → 
 All numbers come from the same event set, so tiles, bars and summary always agree.
 
 ## Settings
-`GET /settings/company` / `PUT` `{name, industry, address, phone, googleReviewUrl, timezone}`
+`GET /settings/company` / `PUT` `{name, industry, address, phone, email, googleReviewUrl, timezone}` (`email` is the Reply-To of customer mails)
 `GET /settings/hours` / `PUT` `[{day:1..7, open:'HH:MM', close:'HH:MM'}]`
 `GET /settings/ai` / `PUT` `{name, language, tone, greeting, autonomy:'assist'|'semi'|'autopilot', escalation}`
 `GET /settings/team` → `{ users:[{id,name,email,role}], staff:[{id,name,skills,active}] }`
@@ -126,6 +143,7 @@ All numbers come from the same event set, so tiles, bars and summary always agre
 WhatsApp goes live with `POST /integrations/whatsapp_360dialog/connect {apiKey, testAccount}`: the server registers `/api/webhooks/whatsapp_360dialog/<secret>` with 360dialog (400 `provider_rejected` if 360dialog refuses the key), stores the key encrypted and from then on sends through 360dialog. Incoming messages land in the inbox; the AI answers per the autonomy setting (assist: hand to staff; semi: answer when the knowledge clearly matches, otherwise a holding reply and hand-off; autopilot: always answer). The first AI message in a conversation says that an AI is writing.
 Google Business Profile connects the same way with `POST /integrations/google_business/start` (scope `business.manage`). With one location it is selected automatically; otherwise `GET /integrations/google_business/locations` → `{locations:[{id,title,address}], selected}` and `PUT /integrations/google_business/location {locationId}`. Needs the APIs "My Business Account Management", "My Business Business Information" and the v4 reviews API enabled in the Cloud project, plus approved GBP API access.
 Google Calendar connects through OAuth: `POST /integrations/google_calendar/start` → `{url}` (Google consent screen; 400 `google_not_configured` until a platform admin saved the OAuth client). Google redirects to `GET /integrations/google/callback`, which stores the refresh token encrypted and redirects to `/integrations?google=connected` or `/integrations?google_error=<text>`. `GET /integrations/google_calendar/calendars` → `{account, calendars:[{id,name,primary}], staff:[{id,name,calendarId|null}]}`; `PUT` the same path with `{staffCalendars: {staffId: calendarId|null}}`. Linked staff: their Google busy times block slots and their bookings land in that calendar; unlinked staff book into the primary calendar. Google errors never fail a booking; they appear as `lastError` on the integration.
+Email goes live with `POST /integrations/brevo/connect {apiKey, senderEmail}`: the key is checked against Brevo's `/account` endpoint (400 `provider_rejected` otherwise) and stored encrypted. The sender address must be verified in Brevo; the display name is the business name.
 Providers: `fonio`, `whatsapp_360dialog`, `google_calendar`, `microsoft_365`, `google_business`, `brevo`, `openai`.
 
 ## Platform admin (users with isPlatformAdmin)

@@ -25,6 +25,7 @@ import { PROVIDERS } from '../providers/registry.js';
 import { canEncrypt, decrypt, encrypt } from '../lib/secretbox.js';
 import { revokeGoogleToken } from '../providers/google-calendar.js';
 import { setDialog360Webhook } from '../providers/dialog360.js';
+import { brevoAccount } from '../providers/brevo.js';
 import { clearAiSettings, getAiSettings, saveAiSettings, storedToken } from '../services/ai-settings.js';
 import { answerQuestion } from '../services/knowledge.js';
 import { webhookLog } from '../services/webhook-log.js';
@@ -217,7 +218,7 @@ export async function systemRoutes(app: FastifyInstance) {
 
   app.get('/settings/company', async (req) => {
     const t = await tenantOf(auth(req).tenantId);
-    return { name: t.name, industry: t.industry, address: t.address, phone: t.phone, googleReviewUrl: t.googleReviewUrl, timezone: t.timezone };
+    return { name: t.name, industry: t.industry, address: t.address, phone: t.phone, email: t.email, googleReviewUrl: t.googleReviewUrl, timezone: t.timezone };
   });
 
   app.put('/settings/company', async (req) => {
@@ -228,6 +229,7 @@ export async function systemRoutes(app: FastifyInstance) {
         industry: z.string().trim().min(1).max(100),
         address: optionalString,
         phone: optionalString,
+        email: z.string().trim().toLowerCase().email('Bitte eine gültige E-Mail-Adresse angeben').max(200).optional().nullable().or(z.literal('')).transform((v) => v || null),
         googleReviewUrl: z.string().trim().url('Bitte eine vollständige URL angeben').startsWith('https://').optional().nullable().or(z.literal('')).transform((v) => v || null),
         timezone: z.string().refine((tz) => Intl.supportedValuesOf('timeZone').includes(tz), 'Unbekannte Zeitzone').optional(),
       }),
@@ -236,7 +238,7 @@ export async function systemRoutes(app: FastifyInstance) {
     await db.update(tenants).set(body).where(eq(tenants.id, a.tenantId));
     await recordEvent(db, { tenantId: a.tenantId, type: 'settings.company_updated', actor: userActor(a), summary: 'Unternehmensdaten geändert' });
     const t = await tenantOf(a.tenantId);
-    return { name: t.name, industry: t.industry, address: t.address, phone: t.phone, googleReviewUrl: t.googleReviewUrl, timezone: t.timezone };
+    return { name: t.name, industry: t.industry, address: t.address, phone: t.phone, email: t.email, googleReviewUrl: t.googleReviewUrl, timezone: t.timezone };
   });
 
   app.get('/settings/hours', async (req) => (await tenantOf(auth(req).tenantId)).businessHours);
@@ -314,7 +316,9 @@ export async function systemRoutes(app: FastifyInstance) {
               ? `${row.config.testAccount === 'true' ? '360dialog-Testzugang' : '360dialog'}, Schlüssel ${row.config.keyHint}`
               : p.provider === 'google_calendar'
                 ? `Verbunden mit ${row.config.account}`
-                : p.provider === 'google_business'
+                : p.provider === 'brevo'
+                  ? `Absender ${row.config.senderEmail}, Schlüssel ${row.config.keyHint}`
+                  : p.provider === 'google_business'
                   ? row.config.locationTitle
                     ? `Standort: ${row.config.locationTitle}`
                     : 'Verbunden, Standort noch auswählen'
@@ -337,7 +341,15 @@ export async function systemRoutes(app: FastifyInstance) {
     const provider = (req.params as { provider: string }).provider;
     if (!PROVIDERS.some((p) => p.provider === provider)) throw notFound('Integration');
     if (provider === 'openai') throw badRequest('Das KI-Modell wird unter Plattform-Admin eingerichtet.');
-    const body = parse(z.object({ apiKey: optionalString, testAccount: z.boolean().optional() }), req.body ?? {});
+    const body = parse(
+      z.object({
+        apiKey: optionalString,
+        testAccount: z.boolean().optional(),
+        senderEmail: z.string().trim().toLowerCase().email('Bitte eine gültige Absender-Adresse angeben').max(200).optional(),
+        senderName: z.string().trim().max(70).optional(),
+      }),
+      req.body ?? {},
+    );
 
     // With a 360dialog key WhatsApp goes live: the key is checked by registering our webhook,
     // whose address carries a fresh secret because 360dialog's test account can't send headers.
@@ -357,6 +369,20 @@ export async function systemRoutes(app: FastifyInstance) {
       await db.insert(apiKeys).values({ id: sha256(secret), tenantId: a.tenantId, provider, label: 'WhatsApp Webhook' });
       mode = 'live';
       config = { apiKey: encrypt(apiKey), keyHint: `…${apiKey.slice(-4)}`, testAccount: String(testAccount) };
+    }
+    // With a Brevo key email goes live; the key is checked against Brevo's account endpoint.
+    if (provider === 'brevo' && body.apiKey) {
+      if (!canEncrypt()) throw badRequest('Auf dem Server fehlt APP_SECRET, deshalb kann der Schlüssel nicht sicher gespeichert werden.');
+      if (!body.senderEmail) throw badRequest('Bitte die Absender-Adresse angeben, die in Brevo bestätigt ist.', 'validation');
+      const apiKey = body.apiKey.trim();
+      let account: { email: string };
+      try {
+        account = await brevoAccount(apiKey);
+      } catch (err) {
+        throw badRequest(`Verbindung zu Brevo fehlgeschlagen: ${(err as Error).message}`, 'provider_rejected');
+      }
+      mode = 'live';
+      config = { apiKey: encrypt(apiKey), keyHint: `…${apiKey.slice(-4)}`, senderEmail: body.senderEmail, senderName: body.senderName ?? '', account: account.email };
     }
     await db
       .insert(integrations)

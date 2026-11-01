@@ -18,8 +18,19 @@ export interface MessagingProvider {
   sendTemplate(input: { to: string; template: string; variables: Record<string, string> }): Promise<SendResult>;
 }
 
+export type EmailInput = {
+  to: string;
+  subject: string;
+  text: string;
+  /** Display name of the sending business, e.g. "Kfz-Werkstatt Muster". */
+  fromName?: string;
+  replyTo?: string;
+  /** Extra headers such as List-Unsubscribe for marketing mails. */
+  headers?: Record<string, string>;
+};
+
 export interface EmailProvider {
-  send(input: { to: string; subject: string; text: string }): Promise<SendResult>;
+  send(input: EmailInput): Promise<SendResult>;
 }
 
 export type BusyInterval = { start: Date; end: Date };

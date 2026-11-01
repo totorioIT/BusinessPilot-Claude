@@ -18,6 +18,9 @@ import { voiceRoutes } from './routes/voice.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { googleRoutes } from './routes/google.js';
 import { adminRoutes } from './routes/admin.js';
+import { marketingRoutes } from './routes/marketing.js';
+import { publicRoutes } from './routes/public.js';
+import { setPublicUrl } from './services/automations.js';
 
 export type AppOptions = {
   db: Db;
@@ -39,6 +42,7 @@ export async function buildApp(opts: AppOptions) {
   const app = Fastify({ logger: opts.logger ?? false, trustProxy: true, bodyLimit: 1_000_000 });
   app.decorate('db', opts.db);
   app.decorate('publicUrl', opts.publicUrl);
+  setPublicUrl(opts.publicUrl);
   app.decorate('cookieSecure', opts.cookieSecure);
   app.decorateRequest('auth', null);
 
@@ -94,7 +98,7 @@ export async function buildApp(opts: AppOptions) {
   app.addHook('onSend', async (req, reply) => {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
-    reply.header('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+    if (!reply.hasHeader('Content-Security-Policy')) reply.header('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     if (opts.cookieSecure) reply.header('Strict-Transport-Security', 'max-age=31536000');
@@ -111,6 +115,8 @@ export async function buildApp(opts: AppOptions) {
   await app.register(webhookRoutes, { prefix: '/api/webhooks' });
   await app.register(googleRoutes, { prefix: '/api' });
   await app.register(adminRoutes, { prefix: '/api' });
+  await app.register(marketingRoutes, { prefix: '/api' });
+  await app.register(publicRoutes, { prefix: '/api/public' });
 
   if (opts.dashboardDist && existsSync(opts.dashboardDist)) {
     await app.register(fastifyStatic, { root: path.resolve(opts.dashboardDist), wildcard: false });

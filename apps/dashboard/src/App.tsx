@@ -15,6 +15,7 @@ import { AppointmentsPage } from './pages/Appointments';
 import { QuotesPage } from './pages/Quotes';
 import { TasksPage } from './pages/Tasks';
 import { AutomationsPage } from './pages/Automations';
+import { CampaignsPage } from './pages/Campaigns';
 import { ReviewsPage } from './pages/Reviews';
 import { KnowledgePage } from './pages/Knowledge';
 import { AnalyticsPage } from './pages/Analytics';
@@ -62,6 +63,7 @@ export function App() {
         <Route path="quotes" element={<QuotesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="automations" element={<AutomationsPage />} />
+        <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="analytics" element={<AnalyticsPage />} />

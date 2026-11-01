@@ -222,6 +222,8 @@ export interface ServiceType {
   name: string;
   durationMin: number;
   bufferMin: number;
+  /** Days after a completed visit when the customer is invited to book again. */
+  rebookAfterDays: number | null;
 }
 export interface Staff {
   id: string;
@@ -332,6 +334,7 @@ export interface CompanySettings {
   industry: string | null;
   address: string | null;
   phone: string | null;
+  email: string | null;
   googleReviewUrl: string | null;
   timezone: string;
 }
@@ -445,4 +448,39 @@ export type GoogleReviewsData =
 export interface BusinessLocations {
   locations: { id: string; title: string; address: string | null }[];
   selected: string | null;
+}
+
+export type ConsentChannel = 'email' | 'whatsapp';
+export interface Consent {
+  channel: ConsentChannel;
+  status: 'granted' | 'revoked' | 'pending' | 'none';
+  source: string | null;
+  grantedAt: string | null;
+  revokedAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CampaignAudience {
+  serviceTypeId?: string | null;
+  visitedWithinDays?: number | null;
+}
+export interface Campaign {
+  id: string;
+  title: string;
+  subject: string;
+  body: string;
+  audience: CampaignAudience;
+  status: 'draft' | 'sending' | 'sent';
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  createdAt: string;
+  sentAt: string | null;
+}
+export interface CampaignsData {
+  items: Campaign[];
+  /** Brevo connected: mails really go out (otherwise sandbox). */
+  emailLive: boolean;
+  /** Server can sign unsubscribe links (APP_SECRET set). */
+  canSend: boolean;
 }

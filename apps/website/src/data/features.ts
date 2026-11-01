@@ -1,4 +1,4 @@
-// Die 13 BusinessPilot-Bausteine mit Standard-Beispiel.
+// Die BusinessPilot-Bausteine mit Standard-Beispiel.
 // Branchenseiten überschreiben das Beispiel über industry.featureExamples.
 
 export type FeatureId =
@@ -13,6 +13,8 @@ export type FeatureId =
   | 'reaktivierung'
   | 'angebote'
   | 'bewertungen'
+  | 'wiederbuchung'
+  | 'aktionen'
   | 'ki-mitarbeiter'
   | 'reporting';
 
@@ -33,6 +35,8 @@ export interface Feature {
   title: string;
   icon: string;
   description: string;
+  /** Kurzer Rechtshinweis unter der Beschreibung (z. B. Einwilligung bei Werbung) */
+  legalNote?: string;
   example: FeatureExample;
 }
 
@@ -162,6 +166,32 @@ export const features: Feature[] = [
     example: {
       text: 'Auftrag abgeschlossen',
       steps: ['Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'],
+    },
+  },
+  {
+    id: 'wiederbuchung',
+    title: 'Wiederbuchung',
+    icon: 'repeat',
+    description:
+      'Nach dem Besuch ist vor dem Besuch. BusinessPilot merkt sich, wann der nächste Termin sinnvoll ist, zum Beispiel Reifenwechsel, Inspektion, Haarschnitt nach sechs Wochen oder die jährliche Wartung. Zum passenden Zeitpunkt kommt eine Erinnerung, und der Kunde bucht direkt.',
+    legalNote: 'Nur mit Einwilligung des Kunden, Abmeldung jederzeit möglich.',
+    example: {
+      text: 'Sommerreifen im April montiert',
+      steps: ['Im Oktober an Winterreifen erinnern', 'Freien Termin vorschlagen', 'Kunde bucht per WhatsApp'],
+      outcome: 'Der nächste Auftrag ist schon im Kalender.',
+    },
+  },
+  {
+    id: 'aktionen',
+    title: 'Aktionen & Neuigkeiten',
+    icon: 'megaphone',
+    description:
+      'Neue Felgen eingetroffen, Livemusik am Freitag, Dauerwelle im Angebot oder eine Gutscheinaktion: BusinessPilot informiert Ihre Stammkunden gezielt per WhatsApp oder E-Mail. Antworten, Reservierungen und Buchungen landen direkt bei Ihnen.',
+    legalNote: 'Werbung nur an Kunden mit Einwilligung (Opt-in), Abmeldung mit einem Klick.',
+    example: {
+      text: 'Gutscheinaktion zum Advent',
+      steps: ['Stammkunden mit Einwilligung auswählen', 'Aktion per WhatsApp senden', 'Kunde kauft Gutschein oder bucht'],
+      outcome: 'Mehr Umsatz mit Kunden, die Sie schon kennen.',
     },
   },
   {

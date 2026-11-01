@@ -1,4 +1,5 @@
-// Paketstruktur. Preise und Feature-Zuordnung sind fest vorgegeben, bitte nicht ändern.
+// Paketstruktur. Preise sind fest vorgegeben (Preisentscheidung offen).
+// 2026-11-01: Wiederbuchung (BUSINESS) und Aktionen & Neuigkeiten (AUTOPILOT) ergänzt.
 
 export type PlanId = 'START' | 'BUSINESS' | 'AUTOPILOT';
 
@@ -29,7 +30,7 @@ export const plans: Plan[] = [
     priceMonthly: '499 €',
     onboarding: '990 € einmaliges Onboarding',
     includesPrevious: 'START',
-    features: ['Telefon-KI', 'Terminerinnerungen', 'CRM / Customer 360', 'Bewertungsautomation', 'Pro Reporting'],
+    features: ['Telefon-KI', 'Terminerinnerungen', 'CRM / Customer 360', 'Bewertungsautomation', 'Wiederbuchung nach Besuch', 'Pro Reporting'],
     highlighted: true,
   },
   {
@@ -39,7 +40,7 @@ export const plans: Plan[] = [
     priceMonthly: '899 €',
     onboarding: 'ab 1.990 € einmaliges Onboarding',
     includesPrevious: 'BUSINESS',
-    features: ['Kundenreaktivierung', 'Angebotsprozesse', 'individuelle Workflows', 'ROI Reporting'],
+    features: ['Kundenreaktivierung', 'Aktionen & Neuigkeiten', 'Angebotsprozesse', 'individuelle Workflows', 'ROI Reporting'],
   },
 ];
 
