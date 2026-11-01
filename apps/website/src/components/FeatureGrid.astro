@@ -1,6 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import { features, type FeatureExample, type FeatureId } from '../data/features';
+import { plans } from '../data/plans';
 
 interface Props {
   id?: string;
@@ -9,9 +10,10 @@ interface Props {
   light?: boolean;
 }
 const { id = 'funktionen', industryName, examples = {}, light = false } = Astro.props;
+const count = features.length;
 const lead = industryName
-  ? `13 Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden – hier am Beispiel ${industryName}.`
-  : '13 Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden.';
+  ? `${count} Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden – hier am Beispiel ${industryName}.`
+  : `${count} Bausteine, die Kundenkommunikation und wiederkehrende Abläufe miteinander verbinden.`;
 const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example }));
 ---
 <section id={id} class:list={['section', { 'section--light': light }]} aria-labelledby={`${id}-title`}>
@@ -32,6 +34,9 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
               <h3 class="feature-card__title">{f.title}</h3>
             </div>
             <p class="feature-card__desc">{f.description}</p>
+            {f.legalNote && (
+              <p class="feature-card__legal"><Icon name="shield" size={14} /> {f.legalNote}</p>
+            )}
             <div class="quote-box feature-card__example">
               {ex.isQuote ? <q>{ex.text}</q> : <span>{ex.text}</span>}
               {ex.sample && <span class="example-label">Beispielwerte</span>}
@@ -54,13 +59,24 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
         );
       })}
       <li class="feature-cta">
-        <div>
+        <div class="feature-cta__intro">
           <h3 class="feature-cta__title">{industryName ? 'Welche Bausteine brauchen Sie?' : 'Welche Bausteine brauchst du?'}</h3>
           <p>{industryName
-            ? 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu Ihrem Betrieb.'
-            : 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu deinem Betrieb.'}</p>
+            ? 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu Ihrem Betrieb. Jedes Paket enthält alles aus dem vorherigen.'
+            : 'Die Pakete START, BUSINESS und AUTOPILOT bündeln die Bausteine passend zu deinem Betrieb. Jedes Paket enthält alles aus dem vorherigen.'}</p>
+          <a class="btn btn--primary" href="/#preise">Pakete vergleichen <Icon name="arrowRight" size={18} /></a>
         </div>
-        <a class="btn btn--primary" href="/#preise">Pakete vergleichen <Icon name="arrowRight" size={18} /></a>
+        <ul class="feature-cta__plans" role="list">
+          {plans.map((p) => (
+            <li class:list={['feature-cta__plan', { 'feature-cta__plan--highlight': p.highlighted }]}>
+              <span class="feature-cta__plan-name">{p.name}</span>
+              <span class="feature-cta__plan-pos">{p.positioning}</span>
+              <ul role="list">
+                {p.features.map((name) => <li><Icon name="check" size={14} /> {name}</li>)}
+              </ul>
+            </li>
+          ))}
+        </ul>
       </li>
     </ul>
   </div>
@@ -109,19 +125,38 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
     content: ''; position: absolute; left: 12px; top: 30px; height: 14px; border-left: 2px solid var(--green-100);
   }
   .feature-card__outcome { margin-top: 8px; font-weight: 700; color: var(--green-700); font-size: .9375rem; }
-  .feature-cta {
-    grid-column: span 2; align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
-    padding: 28px; border-radius: var(--radius-lg); color: var(--white); background: var(--navy-900);
+  .feature-card__legal {
+    display: flex; align-items: flex-start; gap: 6px; margin-top: -6px;
+    color: var(--text-muted); font-size: .8125rem; line-height: 1.4;
   }
-  .feature-cta__title { font-size: 1.5rem; margin-bottom: 8px; }
-  .feature-cta p { color: var(--text-on-dark-muted); max-width: 520px; }
+  .feature-card__legal :global(svg) { flex: none; margin-top: 2px; color: var(--green-700); }
+  /* Paket-Box: füllt die restliche Zeile (bei 15 Bausteinen die ganze Breite) */
+  .feature-cta {
+    grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 28px; align-items: start;
+    padding: 32px; border-radius: var(--radius-lg); color: var(--white); background: var(--navy-900);
+  }
+  .feature-cta__intro { display: flex; flex-direction: column; gap: 16px; }
+  .feature-cta__title { font-size: 1.5rem; }
+  .feature-cta__intro p { color: var(--text-on-dark-muted); }
   .feature-cta .btn { align-self: flex-start; }
+  .feature-cta__plans { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .feature-cta__plan {
+    display: flex; flex-direction: column; gap: 6px; padding: 18px;
+    border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--radius); background: rgba(255, 255, 255, .04);
+  }
+  .feature-cta__plan--highlight { border-color: var(--green-500); box-shadow: inset 0 0 0 1px var(--green-500); }
+  .feature-cta__plan-name { font-size: .8125rem; font-weight: 800; letter-spacing: .08em; color: var(--green-500); }
+  .feature-cta__plan-pos { font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .feature-cta__plan ul { list-style: none; display: grid; gap: 6px; }
+  .feature-cta__plan li { display: flex; align-items: flex-start; gap: 8px; font-size: .875rem; color: var(--text-on-dark-muted); }
+  .feature-cta__plan li :global(svg) { flex: none; margin-top: 3px; color: var(--green-500); }
   @media (max-width: 1024px) {
     .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .feature-cta { grid-column: span 1; }
+    .feature-cta { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 640px) {
     .feature-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .feature-card { padding: 20px; }
+    .feature-cta { padding: 24px 20px; }
   }
 </style>
