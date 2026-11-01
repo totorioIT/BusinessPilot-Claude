@@ -53,6 +53,17 @@ export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
     ],
   },
   {
+    key: 'rebooking',
+    name: 'Wiederbuchung nach Besuch',
+    description: 'Termin erledigt → nach dem Abstand der Leistung erinnern → freie Termine vorschlagen',
+    steps: [
+      { type: 'trigger', label: 'Termin abgeschlossen' },
+      { type: 'wait', label: 'Abstand der Leistung (Einstellungen → Leistungen)' },
+      { type: 'condition', label: 'Nur mit Werbe-Einwilligung und ohne geplanten Termin' },
+      { type: 'action', label: 'E-Mail mit zwei freien Terminen senden' },
+    ],
+  },
+  {
     key: 'reactivation',
     name: 'Kunden-Reaktivierung',
     description: 'Keine Interaktion seit 6 Monaten → persönliche WhatsApp',

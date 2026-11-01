@@ -21,7 +21,7 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
   });
   const connected = it.status === 'connected';
   // WhatsApp goes live with the tenant's own 360dialog key; the platform-wide model is set up by the admin.
-  const needsKey = it.provider === 'whatsapp_360dialog' && it.mode !== 'live';
+  const needsKey = (it.provider === 'whatsapp_360dialog' || it.provider === 'brevo') && it.mode !== 'live';
   // Google Calendar connects through Google's own consent screen.
   const needsGoogle = (it.provider === 'google_calendar' || it.provider === 'google_business') && it.mode !== 'live';
   const google = useMutation({
@@ -60,7 +60,7 @@ function IntegrationCard({ it, onKey }: { it: Integration; onKey: (provider: str
         </div>
       )}
       <FormError error={m.error} />
-      {needsKey && <Dialog360KeyForm />}
+      {needsKey && (it.provider === 'brevo' ? <BrevoKeyForm /> : <Dialog360KeyForm />)}
       {needsGoogle && (
         <>
           <FormError error={google.error} />
@@ -135,6 +135,54 @@ function Dialog360KeyForm() {
       <FormError error={m.error} />
       <div className="integration__actions">
         <button type="submit" className="btn btn--primary btn--sm" disabled={m.isPending || apiKey.trim().length < 8}>
+          {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} Verbinden
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Brevo key entry: the server checks the key with Brevo before storing it encrypted. */
+function BrevoKeyForm() {
+  const qc = useQueryClient();
+  const [apiKey, setApiKey] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
+  const m = useMutation({
+    mutationFn: () => api.post<Integration>('/integrations/brevo/connect', { apiKey: apiKey.trim(), senderEmail: senderEmail.trim() }),
+    onSuccess: () => {
+      setApiKey('');
+      qc.invalidateQueries({ queryKey: ['integrations'] });
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+  });
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    m.mutate();
+  }
+  return (
+    <form className="form stack" onSubmit={submit}>
+      <div className="field">
+        <label htmlFor="brevo-key">Brevo API-Schlüssel</label>
+        <input
+          id="brevo-key"
+          type="password"
+          autoComplete="new-password"
+          data-1p-ignore
+          data-lpignore="true"
+          placeholder="xkeysib-…"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+        <p className="field__hint">In Brevo unter „SMTP &amp; API“ → „API-Schlüssel“. Wird verschlüsselt gespeichert.</p>
+      </div>
+      <div className="field">
+        <label htmlFor="brevo-sender">Absender-Adresse</label>
+        <input id="brevo-sender" type="email" placeholder="info@ihr-betrieb.de" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} />
+        <p className="field__hint">Muss in Brevo als Absender bestätigt sein. Als Name erscheint Ihr Firmenname.</p>
+      </div>
+      <FormError error={m.error} />
+      <div className="integration__actions">
+        <button type="submit" className="btn btn--primary btn--sm" disabled={m.isPending || apiKey.trim().length < 8 || !senderEmail.includes('@')}>
           {m.isPending ? <Spinner /> : <Link2 aria-hidden="true" />} Verbinden
         </button>
       </div>

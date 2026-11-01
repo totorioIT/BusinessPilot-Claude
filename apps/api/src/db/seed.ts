@@ -85,8 +85,8 @@ export async function seed(db: Db, opts: SeedOptions = {}) {
     diagnose: newId('srv'),
   };
   await db.insert(s.serviceTypes).values([
-    { id: st.reifen, tenantId, code: 'reifenwechsel', name: 'Reifenwechsel', durationMin: 45, bufferMin: 10, resourceKind: 'lift', requiredSkill: 'reifen', maxPerDay: 12 },
-    { id: st.inspektion, tenantId, code: 'inspektion', name: 'Inspektion', durationMin: 120, bufferMin: 15, resourceKind: 'lift', requiredSkill: 'inspektion' },
+    { id: st.reifen, tenantId, code: 'reifenwechsel', name: 'Reifenwechsel', durationMin: 45, bufferMin: 10, resourceKind: 'lift', requiredSkill: 'reifen', maxPerDay: 12, rebookAfterDays: 180 },
+    { id: st.inspektion, tenantId, code: 'inspektion', name: 'Inspektion', durationMin: 120, bufferMin: 15, resourceKind: 'lift', requiredSkill: 'inspektion', rebookAfterDays: 365 },
     { id: st.hu, tenantId, code: 'hu', name: 'HU/AU', durationMin: 60, bufferMin: 10, resourceKind: 'lift', requiredSkill: 'hu' },
     { id: st.bremsen, tenantId, code: 'bremsen', name: 'Bremsenservice', durationMin: 90, bufferMin: 15, resourceKind: 'lift', requiredSkill: 'bremsen' },
     { id: st.diagnose, tenantId, code: 'diagnose', name: 'Fehlerdiagnose', durationMin: 30, bufferMin: 0, requiredSkill: 'diagnose' },

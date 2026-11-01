@@ -3,6 +3,7 @@ import type { Db, DbOrTx } from '../db/client.js';
 import {
   appointments,
   automations,
+  campaigns,
   communicationConsents,
   conversations,
   customers,
@@ -10,12 +11,15 @@ import {
   messages,
   quotes,
   reviewRequests,
+  serviceTypes,
   tasks,
   tenants,
 } from '../db/schema.js';
+import { canSignLinks, signLink } from '../lib/signed-links.js';
+import { searchAvailability } from './scheduling.js';
 import { recordEvent } from '../lib/events.js';
 import { newId } from '../lib/ids.js';
-import { addMinutes, spokenDateTime } from '../lib/time.js';
+import { addMinutes, localDate, spokenDateTime } from '../lib/time.js';
 import { providersFor } from '../providers/registry.js';
 
 // Campaign/automation core from the blueprint: domain events schedule durable jobs here,
@@ -57,24 +61,32 @@ export const automationHooks = {
   },
 
   async appointmentCancelled(db: DbOrTx, tenantId: string, appointmentId: string) {
-    await cancelJobs(db, tenantId, [`reminder:${appointmentId}`, `review:${appointmentId}`]);
+    await cancelJobs(db, tenantId, [`reminder:${appointmentId}`, `review:${appointmentId}`, `rebook:${appointmentId}`]);
   },
 
   async appointmentCompleted(db: DbOrTx, tenantId: string, appointmentId: string) {
-    if (!(await enabledAutomation(db, tenantId, 'review_request'))) return;
     const [apt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId));
     if (!apt?.customerId) return;
-    const runAt = addMinutes(new Date(), 120);
-    await db.insert(reviewRequests).values({
-      id: newId('rr'),
-      tenantId,
-      customerId: apt.customerId,
-      appointmentId,
-      channel: 'whatsapp',
-      status: 'planned',
-      scheduledFor: runAt,
-    });
-    await schedule(db, tenantId, 'review_request', runAt, { appointmentId }, `review:${appointmentId}`);
+    if (await enabledAutomation(db, tenantId, 'review_request')) {
+      const runAt = addMinutes(new Date(), 120);
+      await db.insert(reviewRequests).values({
+        id: newId('rr'),
+        tenantId,
+        customerId: apt.customerId,
+        appointmentId,
+        channel: 'whatsapp',
+        status: 'planned',
+        scheduledFor: runAt,
+      });
+      await schedule(db, tenantId, 'review_request', runAt, { appointmentId }, `review:${appointmentId}`);
+    }
+    // Rebooking: invite the customer again once the service is due (e.g. tyres after 6 months).
+    if (apt.serviceTypeId && (await enabledAutomation(db, tenantId, 'rebooking'))) {
+      const [st] = await db.select().from(serviceTypes).where(eq(serviceTypes.id, apt.serviceTypeId));
+      if (st?.rebookAfterDays) {
+        await schedule(db, tenantId, 'rebooking', addMinutes(new Date(), st.rebookAfterDays * 1440), { appointmentId }, `rebook:${appointmentId}`);
+      }
+    }
   },
 
   async quoteSent(db: DbOrTx, tenantId: string, quoteId: string) {
@@ -85,7 +97,12 @@ export const automationHooks = {
 
 type Channel = { kind: 'whatsapp'; to: string } | { kind: 'email'; to: string };
 
-/** WhatsApp needs an opt-in; otherwise fall back to email. Marketing purposes need explicit consent. */
+/**
+ * Service messages: WhatsApp needs an opt-in, otherwise email. Marketing (offers, news,
+ * rebooking) goes by email only and only with the customer's marketing consent for email:
+ * WhatsApp allows promotional messages outside a running chat only through templates
+ * approved by Meta, which are not set up yet.
+ */
 async function pickChannel(db: DbOrTx, tenantId: string, customerId: string, purpose: 'service' | 'marketing'): Promise<Channel | null> {
   const [customer] = await db.select().from(customers).where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId)));
   if (!customer) return null;
@@ -93,9 +110,12 @@ async function pickChannel(db: DbOrTx, tenantId: string, customerId: string, pur
     .select()
     .from(communicationConsents)
     .where(and(eq(communicationConsents.tenantId, tenantId), eq(communicationConsents.customerId, customerId), eq(communicationConsents.status, 'granted')));
-  const has = (channel: string) => consents.some((c) => c.channel === channel && (purpose === 'service' || c.purpose === 'marketing'));
-  if (customer.phone && has('whatsapp')) return { kind: 'whatsapp', to: customer.phone };
-  if (customer.email && (purpose === 'service' || has('email'))) return { kind: 'email', to: customer.email };
+  if (purpose === 'marketing') {
+    const emailOk = consents.some((c) => c.channel === 'email' && c.purpose === 'marketing');
+    return customer.email && emailOk ? { kind: 'email', to: customer.email } : null;
+  }
+  if (customer.phone && consents.some((c) => c.channel === 'whatsapp')) return { kind: 'whatsapp', to: customer.phone };
+  if (customer.email) return { kind: 'email', to: customer.email };
   return null;
 }
 
@@ -121,8 +141,11 @@ export async function sendToCustomer(
 ): Promise<{ ok: boolean; reason?: string }> {
   const channel = await pickChannel(db, opts.tenantId, opts.customerId, opts.purpose);
   if (!channel) return { ok: false, reason: 'Keine Einwilligung oder Kontaktdaten für den Versand.' };
+  // Every marketing mail must offer a working unsubscribe link; without APP_SECRET we can't sign one.
+  if (opts.purpose === 'marketing' && !canSignLinks()) return { ok: false, reason: 'Auf dem Server fehlt APP_SECRET für den Abmeldelink.' };
   const providers = await providersFor(db, opts.tenantId);
   const [customer] = await db.select().from(customers).where(eq(customers.id, opts.customerId));
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, opts.tenantId));
 
   if (channel.kind === 'whatsapp') {
     const res = await providers.messaging.sendText({ to: channel.to, text: opts.text });
@@ -140,7 +163,15 @@ export async function sendToCustomer(
     });
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, conv.id));
   } else {
-    const res = await providers.email.send({ to: channel.to, subject: opts.subject, text: opts.text });
+    let text = opts.text;
+    let headers: Record<string, string> | undefined;
+    if (opts.purpose === 'marketing') {
+      const url = `${publicUrl()}/api/public/unsubscribe?t=${signLink({ p: 'unsubscribe', t: opts.tenantId, c: opts.customerId, ch: 'email' })}`;
+      text += `\n\n--\n${tenant.name}${tenant.address ? `, ${tenant.address}` : ''}\nSie erhalten diese E-Mail, weil Sie Neuigkeiten von uns zugestimmt haben. Abmelden mit einem Klick: ${url}`;
+      // RFC 8058 one-click unsubscribe, required by Gmail and Yahoo for bulk senders.
+      headers = { 'List-Unsubscribe': `<${url}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' };
+    }
+    const res = await providers.email.send({ to: channel.to, subject: opts.subject, text, fromName: tenant.name, replyTo: tenant.email ?? undefined, headers });
     if (!res.ok) return { ok: false, reason: res.error };
   }
   await recordEvent(db, {
@@ -155,6 +186,13 @@ export async function sendToCustomer(
   return { ok: true };
 }
 
+let configuredPublicUrl = process.env.PUBLIC_URL ?? 'http://localhost:3001';
+/** Set by the app at start so links in emails point to this server. */
+export function setPublicUrl(url: string) {
+  configuredPublicUrl = url.replace(/\/$/, '');
+}
+const publicUrl = () => configuredPublicUrl;
+
 type Job = typeof jobs.$inferSelect;
 
 async function bumpRunCount(db: DbOrTx, tenantId: string, key: string) {
@@ -164,7 +202,102 @@ async function bumpRunCount(db: DbOrTx, tenantId: string, key: string) {
     .where(and(eq(automations.tenantId, tenantId), eq(automations.templateKey, key)));
 }
 
+const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+
+/** Up to `count` free slots on different days within the next two weeks. */
+async function suggestSlots(db: Db, tenantId: string, serviceCode: string, timezone: string, count = 2) {
+  const providers = await providersFor(db, tenantId);
+  const found: Date[] = [];
+  for (let d = 1; d <= 14 && found.length < count; d++) {
+    const date = localDate(addMinutes(new Date(), d * 1440), timezone);
+    const slots = await searchAvailability(db, { tenantId, serviceCode, date, calendar: providers.calendar, limit: 1 }).catch(() => []);
+    if (slots[0]) found.push(slots[0].startsAt);
+  }
+  return found;
+}
+
+export function fillPlaceholders(text: string, customer: { name: string }) {
+  return text.replaceAll('{{vorname}}', firstName(customer.name)).replaceAll('{{name}}', customer.name);
+}
+
 const handlers: Record<string, (db: Db, job: Job) => Promise<void>> = {
+  async rebooking(db, job) {
+    const [apt] = await db.select().from(appointments).where(eq(appointments.id, String(job.payload.appointmentId)));
+    if (!apt?.customerId || !apt.serviceTypeId || apt.status !== 'completed') return;
+    // Skip when the customer already has the next visit planned.
+    const [upcoming] = await db
+      .select({ id: appointments.id })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, job.tenantId),
+          eq(appointments.customerId, apt.customerId),
+          inArray(appointments.status, ['booked', 'confirmed']),
+          sql`${appointments.startsAt} > now()`,
+        ),
+      )
+      .limit(1);
+    if (upcoming) return;
+    const [st] = await db.select().from(serviceTypes).where(eq(serviceTypes.id, apt.serviceTypeId));
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, job.tenantId));
+    const [customer] = await db.select().from(customers).where(eq(customers.id, apt.customerId));
+    if (!st || !customer) return;
+    const slots = await suggestSlots(db, job.tenantId, st.code, tenant.timezone);
+    const last = new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: tenant.timezone }).format(apt.startsAt);
+    const offer = slots.length
+      ? ` Freie Termine hätten wir zum Beispiel am ${slots.map((d) => spokenDateTime(d, tenant.timezone)).join(' oder am ')}.`
+      : '';
+    const contact = tenant.phone ? ` oder rufen Sie uns an: ${tenant.phone}` : '';
+    const res = await sendToCustomer(db, {
+      tenantId: job.tenantId,
+      customerId: apt.customerId,
+      purpose: 'marketing',
+      subject: `Zeit für Ihren nächsten Termin: ${st.name}`,
+      text: `Hallo ${firstName(customer.name)},\n\nIhr letzter Termin „${st.name}“ bei ${tenant.name} war am ${last}. Es ist bald wieder so weit.${offer}\n\nAntworten Sie einfach auf diese E-Mail${contact}, dann tragen wir Sie ein.\n\nViele Grüße\n${tenant.name}`,
+      eventType: 'rebooking.sent',
+      eventSummary: `Wiederbuchung angeboten: ${st.name} an ${customer.name}`,
+    });
+    if (res.ok) await bumpRunCount(db, job.tenantId, 'rebooking');
+  },
+
+  async campaign_send(db, job) {
+    const campaignId = String(job.payload.campaignId);
+    const [campaign] = await db.select().from(campaigns).where(and(eq(campaigns.tenantId, job.tenantId), eq(campaigns.id, campaignId)));
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(and(eq(customers.tenantId, job.tenantId), eq(customers.id, String(job.payload.customerId))));
+    if (!campaign) return;
+    // Consent is checked again at send time: a customer may have unsubscribed in the meantime.
+    const res = customer
+      ? await sendToCustomer(db, {
+          tenantId: job.tenantId,
+          customerId: customer.id,
+          purpose: 'marketing',
+          subject: fillPlaceholders(campaign.subject, customer),
+          text: fillPlaceholders(campaign.body, customer),
+          eventType: 'campaign.message_sent',
+          eventSummary: `Aktion „${campaign.title}“ an ${customer.name} gesendet`,
+        })
+      : { ok: false };
+    const [updated] = await db
+      .update(campaigns)
+      .set(res.ok ? { sentCount: sql`${campaigns.sentCount} + 1` } : { failedCount: sql`${campaigns.failedCount} + 1` })
+      .where(eq(campaigns.id, campaign.id))
+      .returning();
+    if (updated.status === 'sending' && updated.sentCount + updated.failedCount >= updated.recipientCount) {
+      await db.update(campaigns).set({ status: 'sent', sentAt: new Date() }).where(and(eq(campaigns.id, campaign.id), eq(campaigns.status, 'sending')));
+      await recordEvent(db, {
+        tenantId: job.tenantId,
+        type: 'campaign.sent',
+        actor: { type: 'system' },
+        summary: `Aktion „${campaign.title}“ versendet: ${updated.sentCount} zugestellt${updated.failedCount ? `, ${updated.failedCount} nicht möglich` : ''}`,
+        entityType: 'campaign',
+        entityId: campaign.id,
+      });
+    }
+  },
+
   async missed_call(db, job) {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, String(job.payload.conversationId)));
     if (!conv) return;

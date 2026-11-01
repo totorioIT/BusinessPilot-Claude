@@ -6,6 +6,7 @@ import { newId } from '../lib/ids.js';
 import type { IncomingWhatsApp, WhatsAppStatus } from '../providers/dialog360.js';
 import { providersFor } from '../providers/registry.js';
 import { answerQuestion } from './knowledge.js';
+import { isStopMessage, setMarketingConsent } from './consents.js';
 
 // Incoming WhatsApp messages: stored in the inbox first (fast, so the provider gets its 200 in
 // time), then answered by the AI according to the tenant's autonomy setting.
@@ -93,17 +94,48 @@ export async function storeIncomingWhatsApp(db: DbOrTx, tenantId: string, msg: I
 export async function autoReplyWhatsApp(db: DbOrTx, tenantId: string, conversationId: string): Promise<void> {
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   const [conv] = await db.select().from(conversations).where(eq(conversations.id, conversationId));
-  if (!conv?.contactAddress || conv.status !== 'ai_handling') return;
+  if (!conv?.contactAddress) return;
   const ai = tenant.aiSettings;
-  if (ai.autonomy === 'assist') {
-    await db.update(conversations).set({ status: 'needs_staff' }).where(eq(conversations.id, conv.id));
-    return;
-  }
-
   const history = await db.select().from(messages).where(eq(messages.conversationId, conv.id)).orderBy(desc(messages.createdAt));
   const question = history.find((m) => m.direction === 'inbound')?.text;
   if (!question) return;
   const providers = await providersFor(db, tenantId);
+
+  // "STOP" ends marketing messages right away and is never answered by the AI.
+  if (isStopMessage(question)) {
+    if (conv.customerId) {
+      for (const channel of ['whatsapp', 'email'] as const) {
+        await setMarketingConsent(db, { tenantId, customerId: conv.customerId, channel, status: 'revoked', source: 'Kunde hat „STOP“ per WhatsApp geschrieben', actor: { type: 'system', name: 'Kunde' } });
+      }
+    }
+    const text = `Alles klar, Sie erhalten von ${tenant.name} keine Angebote und Neuigkeiten mehr. Bei Fragen können Sie uns hier trotzdem jederzeit schreiben.`;
+    const res = await providers.messaging.sendText({ to: conv.contactAddress, text });
+    await db.insert(messages).values({
+      id: newId('msg'),
+      tenantId,
+      conversationId: conv.id,
+      direction: 'outbound',
+      author: 'system',
+      authorName: tenant.name,
+      text,
+      providerMessageId: res.ok ? res.providerMessageId : null,
+      deliveryStatus: res.ok ? 'sent' : 'failed',
+    });
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: new Date(), ...(conv.status === 'ai_handling' ? { status: 'closed' as const } : {}) })
+      .where(eq(conversations.id, conv.id));
+    if (!conv.customerId) {
+      await recordEvent(db, { tenantId, type: 'consent.stop_unknown', actor: { type: 'system' }, summary: `„STOP“ per WhatsApp von ${conv.contactAddress}, kein Kunde zugeordnet`, entityType: 'conversation', entityId: conv.id });
+    }
+    return;
+  }
+
+  if (conv.status !== 'ai_handling') return;
+  if (ai.autonomy === 'assist') {
+    await db.update(conversations).set({ status: 'needs_staff' }).where(eq(conversations.id, conv.id));
+    return;
+  }
   const result = await answerQuestion(db, providers.llm, tenantId, question);
   const handOver = ai.autonomy === 'semi' && result.confidence < SEMI_MIN_CONFIDENCE;
   // AI Act: the first answer in a conversation says that an AI is writing.

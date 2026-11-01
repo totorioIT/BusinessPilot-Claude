@@ -15,6 +15,13 @@
       "when": 1792332495005,
       "tag": "0001_platform_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793549535249,
+      "tag": "0002_marketing",
+      "breakpoints": true
     }
   ]
 }

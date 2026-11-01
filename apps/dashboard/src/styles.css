@@ -723,3 +723,19 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
   display: grid; gap: 8px; padding: 14px; border-radius: var(--radius);
   background: var(--green-50, #ecfdf5); border: 1px solid var(--green-100, #d1fae5); font-size: 0.875rem;
 }
+
+/* Marketing consent, rebooking settings, campaigns */
+.inline-field { display: inline-flex; align-items: center; gap: 8px; }
+.consent__channel { display: inline-flex; align-items: center; gap: 8px; }
+.consent__channel svg { width: 16px; height: 16px; color: var(--text-muted); }
+.consent__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.title-icon { width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; color: var(--green-600); }
+.campaign-list { display: grid; gap: 12px; }
+.campaign { display: grid; gap: 8px; }
+.campaign__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.campaign__body { white-space: pre-wrap; background: var(--gray-50, #f6f8fb); border: 1px solid var(--gray-200); border-radius: 10px; padding: 12px; font-size: 0.875rem; max-height: 220px; overflow: auto; }
+.campaign__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--amber-100); background: var(--amber-50); color: var(--amber-700); font-size: 0.875rem; }
+.notice svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.notice--info { border-color: var(--blue-100); background: var(--blue-50); color: var(--blue-700); }
+.ideas { display: flex; flex-wrap: wrap; gap: 8px; }

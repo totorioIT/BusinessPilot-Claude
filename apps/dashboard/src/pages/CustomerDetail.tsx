@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react';
 import { api, type Asset, type Customer, type CustomerDetail } from '../api';
 import { ChannelIcon, StatusBadge } from '../components/Conversation';
+import { ConsentSection } from '../components/ConsentSection';
 import { CustomerForm, type CustomerInput } from '../components/CustomerForm';
 import { Dialog } from '../components/Dialog';
 import { Badge, EmptyState, ErrorState, FormError, Skeleton, Spinner } from '../components/ui';
@@ -181,6 +182,8 @@ export function CustomerDetailPage() {
       </header>
 
       <div className="grid-2">
+        <ConsentSection customerId={c.id} hasEmail={!!c.email} />
+
         <Section
           title="Fahrzeuge / Anlagen"
           count={assets.length}

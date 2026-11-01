@@ -39,6 +39,8 @@ export const tenants = pgTable('tenants', {
   industry: text('industry').notNull(),
   address: text('address'),
   phone: text('phone'),
+  /** Contact address shown in customer emails and used as Reply-To. */
+  email: text('email'),
   googleReviewUrl: text('google_review_url'),
   timezone: text('timezone').notNull().default('Europe/Berlin'),
   plan: text('plan').notNull().default('start'),
@@ -192,6 +194,8 @@ export const serviceTypes = pgTable(
     resourceKind: text('resource_kind'),
     requiredSkill: text('required_skill'),
     maxPerDay: integer('max_per_day'),
+    /** Days after a completed visit when the customer is invited to book again; null = never. */
+    rebookAfterDays: integer('rebook_after_days'),
     active: boolean('active').notNull().default(true),
   },
   (t) => [uniqueIndex('service_types_tenant_code').on(t.tenantId, t.code)],
@@ -382,7 +386,9 @@ export const voiceSessions = pgTable('voice_sessions', {
   createdAt: createdAt(),
 });
 
-export const communicationConsents = pgTable('communication_consents', {
+export const communicationConsents = pgTable(
+  'communication_consents',
+  {
   id: id(),
   tenantId: tenantId(),
   customerId: text('customer_id')
@@ -390,11 +396,36 @@ export const communicationConsents = pgTable('communication_consents', {
     .references(() => customers.id, { onDelete: 'cascade' }),
   channel: text('channel').notNull(),
   purpose: text('purpose').notNull(),
-  status: text('status').$type<'granted' | 'revoked'>().notNull(),
+  /** pending = double opt-in email sent, not yet confirmed by the customer. */
+  status: text('status').$type<'granted' | 'revoked' | 'pending'>().notNull(),
   source: text('source').notNull(),
   grantedAt: timestamp('granted_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
-});
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex('consents_customer_channel_purpose').on(t.tenantId, t.customerId, t.channel, t.purpose)]);
+
+export type CampaignAudience = { serviceTypeId?: string | null; visitedWithinDays?: number | null };
+
+/** Offers and news sent to existing customers who gave marketing consent ("Aktionen"). */
+export const campaigns = pgTable(
+  'campaigns',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    title: text('title').notNull(),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    audience: jsonb('audience').$type<CampaignAudience>().notNull().default({}),
+    status: text('status').$type<'draft' | 'sending' | 'sent'>().notNull().default('draft'),
+    recipientCount: integer('recipient_count').notNull().default(0),
+    sentCount: integer('sent_count').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+    createdBy: text('created_by'),
+    createdAt: createdAt(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+  },
+  (t) => [index('campaigns_tenant_created').on(t.tenantId, t.createdAt)],
+);
 
 /** Domain events: activity feed, audit log and the input for automations and ROI. */
 export const events = pgTable(
