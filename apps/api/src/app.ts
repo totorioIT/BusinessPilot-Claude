@@ -22,6 +22,8 @@ import { marketingRoutes } from './routes/marketing.js';
 import { publicRoutes } from './routes/public.js';
 import { setPublicUrl } from './services/automations.js';
 
+export const redactUrl = (url: string) => url.split('?')[0].replace(/\/wh_[^/]+/g, '/wh_[redacted]');
+
 export type AppOptions = {
   db: Db;
   publicUrl: string;
@@ -39,7 +41,19 @@ declare module 'fastify' {
 }
 
 export async function buildApp(opts: AppOptions) {
-  const app = Fastify({ logger: opts.logger ?? false, trustProxy: true, bodyLimit: 1_000_000 });
+  const app = Fastify({
+    // Request logs keep only the path: query strings carry signed links and OAuth codes, and the
+    // WhatsApp webhook path carries its secret, none of which belong in server logs.
+    logger: opts.logger
+      ? {
+          serializers: {
+            req: (req) => ({ method: req.method, url: redactUrl(req.url), remoteAddress: req.ip }),
+          },
+        }
+      : false,
+    trustProxy: true,
+    bodyLimit: 1_000_000,
+  });
   app.decorate('db', opts.db);
   app.decorate('publicUrl', opts.publicUrl);
   setPublicUrl(opts.publicUrl);

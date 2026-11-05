@@ -85,6 +85,36 @@ describe('marketing consent', () => {
     assert.match(after.source, /Double-Opt-in/);
   });
 
+  it('does not resend the confirmation mail within a few minutes', async () => {
+    const c = await customerByName('Julia Schmidt');
+    const first = await t.api('PUT', `/customers/${c.id}/consents`, { channel: 'email', action: 'request' });
+    assert.equal(first.status, 200);
+    const again = await t.api('PUT', `/customers/${c.id}/consents`, { channel: 'email', action: 'request' });
+    assert.equal(again.status, 409);
+    assert.equal(again.body.error, 'confirmation_recently_sent');
+    // Reset so later tests start from no consent.
+    await t.db.delete(s.communicationConsents).where(eq(s.communicationConsents.customerId, c.id));
+  });
+
+  it('changing the email address voids consent and old confirmation links', async () => {
+    const c = await customerByName('Max Müller');
+    const before = sandboxLog.length;
+    await t.db.delete(s.communicationConsents).where(eq(s.communicationConsents.customerId, c.id));
+    await t.api('PUT', `/customers/${c.id}/consents`, { channel: 'email', action: 'request' });
+    const token = linkIn(emailsTo(before, c.email!)[0].payload.text, 'consent/confirm');
+
+    const changed = await t.api('PATCH', `/customers/${c.id}`, { email: 'neu.max@example.de' });
+    assert.equal(changed.status, 200);
+    assert.equal((await t.api('GET', `/customers/${c.id}/consents`)).body[0].status, 'revoked');
+    const confirm = await publicReq('POST', 'consent/confirm', token, { 'content-type': 'application/x-www-form-urlencoded' });
+    assert.equal(confirm.statusCode, 400, 'link for the old address no longer works');
+    assert.equal((await t.api('GET', `/customers/${c.id}/consents`)).body[0].status, 'revoked');
+
+    // Restore the original address and the granted consent the later tests rely on.
+    await t.api('PATCH', `/customers/${c.id}`, { email: c.email });
+    await t.api('PUT', `/customers/${c.id}/consents`, { channel: 'email', action: 'grant', source: 'Test: wiederhergestellt' });
+  });
+
   it('a token for another tenant or a broken token shows an error page', async () => {
     const res = await publicReq('GET', 'unsubscribe', signLink({ p: 'unsubscribe', t: 'ten_fremd', c: 'cus_x', ch: 'email' }));
     assert.equal(res.statusCode, 400);
@@ -188,7 +218,8 @@ describe('Wiederbuchung (rebooking)', () => {
 
     const before = sandboxLog.length;
     await runDueJobs(t.db, new Date(job.runAt.getTime() + 1000));
-    const [mail] = emailsTo(before, julia.email!);
+    // The review request after the visit may go out in the same run; pick the rebooking mail.
+    const [mail] = emailsTo(before, julia.email!).filter((m) => /nächsten Termin/.test(m.payload.subject));
     assert.ok(mail, 'invitation mail sent');
     assert.match(mail.payload.subject, /Reifenwechsel/);
     assert.match(mail.payload.text, /Freie Termine hätten wir zum Beispiel/);
@@ -282,5 +313,13 @@ describe('Brevo email', () => {
       globalThis.fetch = realFetch;
       await t.api('POST', '/integrations/brevo/disconnect');
     }
+  });
+});
+
+describe('request logs', () => {
+  it('drop query strings and the webhook secret', async () => {
+    const { redactUrl } = await import('../src/app.js');
+    assert.equal(redactUrl('/api/public/unsubscribe?t=abc.def'), '/api/public/unsubscribe');
+    assert.equal(redactUrl('/api/webhooks/whatsapp_360dialog/wh_s3cr3t'), '/api/webhooks/whatsapp_360dialog/wh_[redacted]');
   });
 });

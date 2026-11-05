@@ -6,7 +6,7 @@ import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { recordEvent } from '../lib/events.js';
 import { auth, parse, requireRole, userActor } from '../lib/http.js';
 import { newId } from '../lib/ids.js';
-import { canSignLinks, signLink } from '../lib/signed-links.js';
+import { canSignLinks, emailFingerprint, signLink } from '../lib/signed-links.js';
 import { addMinutes } from '../lib/time.js';
 import { providersFor } from '../providers/registry.js';
 import { campaignAudience } from '../services/campaigns.js';
@@ -15,6 +15,8 @@ import { marketingConsents, setMarketingConsent } from '../services/consents.js'
 // Offers & news ("Aktionen"), rebooking settings and the customers' marketing consent.
 
 const CONFIRM_VALID_DAYS = 30;
+/** A confirmation email can be sent again only after this pause, so nobody floods a customer's inbox. */
+const CONFIRM_RESEND_MINUTES = 10;
 /** Spread campaign mails out so a provider never sees a burst from one tenant. */
 const SEND_SPACING_SECONDS = 3;
 
@@ -91,8 +93,11 @@ export async function marketingRoutes(app: FastifyInstance) {
       if (!canSignLinks()) throw badRequest('Auf dem Server fehlt APP_SECRET, deshalb kann kein Bestätigungslink erstellt werden.');
       const current = (await marketingConsents(db, a.tenantId, c.id)).find((x) => x.channel === 'email');
       if (current?.status === 'granted') throw conflict('already_granted', 'Die Einwilligung liegt bereits vor.');
+      if (current?.status === 'pending' && current.updatedAt && Date.now() - current.updatedAt.getTime() < CONFIRM_RESEND_MINUTES * 60000) {
+        throw conflict('confirmation_recently_sent', `Die Bestätigungs-E-Mail wurde gerade erst gesendet. Erneut senden geht nach ${CONFIRM_RESEND_MINUTES} Minuten.`);
+      }
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, a.tenantId));
-      const token = signLink({ p: 'confirm', t: a.tenantId, c: c.id, ch: 'email', exp: Date.now() + CONFIRM_VALID_DAYS * 86400000 });
+      const token = signLink({ p: 'confirm', t: a.tenantId, c: c.id, ch: 'email', e: emailFingerprint(c.email), exp: Date.now() + CONFIRM_VALID_DAYS * 86400000 });
       const url = `${app.publicUrl}/api/public/consent/confirm?t=${token}`;
       const providers = await providersFor(db, a.tenantId);
       const res = await providers.email.send({
