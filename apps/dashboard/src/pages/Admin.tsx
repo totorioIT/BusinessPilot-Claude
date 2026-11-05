@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { OneTimeAccess } from '../components/OneTimeAccess';
 import { AiModelCard } from '../components/AiModelCard';
 import { GoogleOAuthCard } from '../components/GoogleOAuthCard';
+import { MfaResetCard, SystemEmailCard } from '../components/SecurityAdminCards';
 import { Badge, EmptyState, ErrorState, FormError, PageHeader, Skeleton, SkeletonTiles, Spinner, StatTile } from '../components/ui';
 import { formatDate, formatNumber } from '../lib/format';
 
@@ -116,6 +117,8 @@ export function AdminPage() {
       <PageHeader title="Plattform-Admin" subtitle="Einstellungen für die ganze Plattform und Übersicht über alle Mandanten." />
       <AiModelCard />
       <GoogleOAuthCard />
+      <SystemEmailCard />
+      <MfaResetCard />
       <NewTenantCard />
       {q.isPending && <SkeletonTiles count={3} />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}

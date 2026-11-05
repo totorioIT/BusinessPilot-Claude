@@ -19,6 +19,8 @@ export type AuthContext = {
   isPlatformAdmin: boolean;
   /** A platform admin looking at a tenant they don't belong to (support access). */
   support: boolean;
+  /** Set while the person must first change the start password or set up two-factor login. */
+  restriction: 'password_change' | 'mfa_setup' | null;
 };
 
 declare module 'fastify' {

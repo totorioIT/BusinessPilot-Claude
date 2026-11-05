@@ -2,7 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import { Layout } from './components/Layout';
 import { ErrorState, FullPageLoader } from './components/ui';
-import { LoginPage } from './pages/Login';
+import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SecuritySetupPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { InboxPage } from './pages/Inbox';
 import { PhonePage } from './pages/Phone';
@@ -37,6 +37,8 @@ function Protected() {
     );
   }
   if (!me) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  // Startpasswort ersetzen oder Zwei-Faktor-Anmeldung einrichten, bevor etwas anderes geht.
+  if (me.security.restriction) return <SecuritySetupPage />;
   return <Layout />;
 }
 
@@ -50,6 +52,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
+      <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
       <Route element={<Protected />}>
         <Route index element={<DashboardPage />} />
         <Route path="inbox" element={<InboxPage />} />

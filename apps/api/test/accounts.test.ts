@@ -31,13 +31,24 @@ test('a platform admin creates a business with an owner login that works once', 
   assert.equal(tenant.plan, 'business');
   assert.equal(tenant.aiSettings.autonomy, 'assist');
 
-  const { res: login } = await t.login(kundeLogin.email, kundeLogin.password);
+  const { res: login, cookie } = await t.login(kundeLogin.email, kundeLogin.password);
   assert.equal(login.statusCode, 200);
   const me = login.json();
   assert.equal(me.tenant.name, 'Salon Schnitt');
   assert.equal(me.role, 'owner');
   assert.equal(me.support, false);
   assert.equal(me.user.isPlatformAdmin, false);
+
+  // With the start password only the password change works.
+  assert.equal(me.security.restriction, 'password_change');
+  const blocked = await t.api('GET', '/customers', undefined, cookie);
+  assert.equal(blocked.status, 403);
+  assert.equal(blocked.body.error, 'password_change_required');
+  const changed = await t.api('POST', '/auth/password', { current: kundeLogin.password, next: 'Salon-Schnitt-Sicher-2026' }, cookie);
+  assert.equal(changed.status, 200);
+  assert.equal(changed.body.security.restriction, null);
+  kundeLogin.password = 'Salon-Schnitt-Sicher-2026';
+  assert.equal((await t.api('GET', '/customers', undefined, cookie)).status, 200);
 });
 
 test('an existing e-mail gets access to the new business instead of a second account', async () => {
@@ -56,13 +67,23 @@ test('only platform admins can create businesses', async () => {
   assert.equal(res.status, 403);
 });
 
+/** Switching the business issues a new session token; returns the answer and the new cookie. */
+const switchTenant = async (tenantId: string, cookie: string) => {
+  const res = await t.app.inject({ method: 'POST', url: '/api/auth/tenant', payload: { tenantId }, headers: { cookie } });
+  const next = res.cookies.find((c) => c.name === 'bp_session');
+  return { status: res.statusCode, body: res.json(), cookie: next ? `bp_session=${next.value}` : cookie };
+};
+
 test('a platform admin opens a customer area as support and goes back', async () => {
-  const cookie = undefined; // the demo owner's session from setup
-  const open = await t.api('POST', '/auth/tenant', { tenantId: kundeId }, cookie);
+  const { cookie: start } = await t.login();
+  const open = await switchTenant(kundeId, start);
   assert.equal(open.status, 200);
   assert.equal(open.body.tenant.name, 'Salon Schnitt');
   assert.equal(open.body.support, true);
   assert.equal(open.body.role, 'owner');
+  assert.notEqual(open.cookie, start, 'a new session token after the change of rights');
+  assert.equal((await t.api('GET', '/auth/me', undefined, start)).status, 401, 'the old token no longer works');
+  const cookie = open.cookie;
 
   // The session now works inside the customer's data.
   const team = await t.api('GET', '/settings/team', undefined, cookie);
@@ -70,7 +91,7 @@ test('a platform admin opens a customer area as support and goes back', async ()
   const [ev] = await t.db.select().from(s.events).where(eq(s.events.type, 'support.access'));
   assert.equal(ev.tenantId, kundeId);
 
-  const back = await t.api('POST', '/auth/tenant', { tenantId: t.tenantId }, cookie);
+  const back = await switchTenant(t.tenantId, cookie);
   assert.equal(back.body.support, false);
   assert.equal(back.body.tenant.id, t.tenantId);
 });
@@ -89,6 +110,7 @@ test('the owner invites and removes a staff login', async () => {
   assert.equal(inv.status, 201);
   const { res: login, cookie: lena } = await t.login('lena@salon-schnitt.de', inv.body.startPassword);
   assert.equal(login.json().role, 'staff');
+  assert.equal((await t.api('POST', '/auth/password', { current: inv.body.startPassword, next: 'Kamm-und-Schere-2026' }, lena)).status, 200);
 
   // Staff can't manage the team.
   const denied = await t.api('POST', '/settings/team/users', { name: 'Neu Ling', email: 'neu@salon-schnitt.de', role: 'admin' }, lena);

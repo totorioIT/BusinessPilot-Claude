@@ -739,3 +739,10 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
 .notice svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
 .notice--info { border-color: var(--blue-100); background: var(--blue-50); color: var(--blue-700); }
 .ideas { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Anmeldung und Kontosicherheit */
+.login__link { text-align: center; color: var(--blue-700); }
+.recovery-codes { margin: 0; padding: 12px 14px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); columns: 2; column-gap: 24px; font-size: 0.9375rem; line-height: 1.8; }
+.mfa-qr { width: 200px; height: 200px; align-self: center; background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 8px; }
+.check-row { display: flex; gap: 8px; align-items: center; font-size: 0.9375rem; }
+.setup-steps { margin: 0; padding-left: 20px; list-style: decimal; display: flex; flex-direction: column; gap: 4px; }

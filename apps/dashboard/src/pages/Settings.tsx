@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, KeyRound, Trash2, UserPlus } from 'lucide-react';
-import { api, type CompanySettings, type HoursEntry, type NewAccess, type Role, type ServiceType, type TeamData } from '../api';
-import { useMe } from '../auth';
+import { Check, KeyRound, LogOut, ShieldCheck, Smartphone, Trash2, UserPlus } from 'lucide-react';
+import { api, type CompanySettings, type HoursEntry, type Me, type NewAccess, type Role, type ServiceType, type TeamData } from '../api';
+import { useAuth, useMe } from '../auth';
+import { MfaSetupFlow, RecoveryCodes } from '../components/MfaSetup';
+import { PasswordChangeForm } from '../components/PasswordForm';
 import { OneTimeAccess } from '../components/OneTimeAccess';
 import { Badge, ErrorState, FormError, Skeleton, Spinner, PageHeader } from '../components/ui';
 import { roleLabel, weekdays } from '../lib/labels';
@@ -453,53 +455,177 @@ function TeamTab() {
 
 function AccountTab() {
   const me = useMe();
-  const [f, setF] = useState({ current: '', next: '', repeat: '' });
+  const { setMe } = useAuth();
   const [saved, setSaved] = useState(false);
-  const change = useMutation({
-    mutationFn: () => api.post('/auth/password', { current: f.current, next: f.next }),
-    onSuccess: () => {
-      setF({ current: '', next: '', repeat: '' });
-      setSaved(true);
+  return (
+    <div className="stack-lg">
+      <section className="card card--pad stack">
+        <h2 className="section-title">
+          <KeyRound aria-hidden="true" /> Passwort ändern
+        </h2>
+        <p className="muted small">
+          Angemeldet als {me.user.name} ({me.user.email}). Nach der Änderung werden Sie auf allen anderen Geräten abgemeldet.
+        </p>
+        <PasswordChangeForm
+          onChanged={(m) => {
+            setMe(m);
+            setSaved(true);
+          }}
+          after={<Saved show={saved} />}
+        />
+      </section>
+      <MfaSection />
+      <SessionsSection />
+    </div>
+  );
+}
+
+function MfaSection() {
+  const me = useMe();
+  const { setMe } = useAuth();
+  const [mode, setMode] = useState<'idle' | 'setup' | 'codes' | 'disable'>('idle');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [codes, setCodes] = useState<string[] | null>(null);
+  const renew = useMutation({
+    mutationFn: () => api.post<{ recoveryCodes: string[] }>('/auth/mfa/recovery-codes', { code: code.trim() }),
+    onSuccess: (r) => {
+      setCodes(r.recoveryCodes);
+      setCode('');
     },
   });
-  const mismatch = f.repeat !== '' && f.next !== f.repeat;
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    setSaved(false);
-    if (!mismatch) change.mutate();
-  }
+  const disable = useMutation({
+    mutationFn: () => api.post<Me>('/auth/mfa/disable', { password, code: code.trim() }),
+    onSuccess: (m) => {
+      setMe(m);
+      setMode('idle');
+      setCode('');
+      setPassword('');
+    },
+  });
+  const sec = me.security;
+  const reset = () => {
+    setMode('idle');
+    setCode('');
+    setPassword('');
+    setCodes(null);
+    renew.reset();
+    disable.reset();
+  };
   return (
-    <form className="card card--pad form stack" onSubmit={submit}>
+    <section className="card card--pad stack">
+      <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+        <h2 className="section-title">
+          <ShieldCheck aria-hidden="true" /> Zwei-Faktor-Anmeldung
+        </h2>
+        {sec.mfaEnabled ? <Badge tone="green">Eingeschaltet</Badge> : <Badge tone="amber">Aus</Badge>}
+      </div>
+      <p className="muted small">
+        Nach dem Passwort fragt die Anmeldung nach einem Code aus der Authenticator-App. Ein gestohlenes Passwort allein reicht dann nicht mehr.
+        {sec.mfaRequired && ' Für Ihr Konto ist sie Pflicht.'}
+      </p>
+      {mode === 'setup' ? (
+        <MfaSetupFlow
+          onDone={(m) => {
+            setMe(m);
+            reset();
+          }}
+          onCancel={reset}
+        />
+      ) : codes ? (
+        <RecoveryCodes codes={codes} onDone={reset} doneLabel="Fertig" />
+      ) : mode === 'codes' || mode === 'disable' ? (
+        <form
+          className="form stack"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (mode === 'codes') renew.mutate();
+            else disable.mutate();
+          }}
+        >
+          {mode === 'disable' && (
+            <div className="field">
+              <label htmlFor="mfa-pw">Passwort</label>
+              <input id="mfa-pw" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+          )}
+          <div className="field">
+            <label htmlFor="mfa-current">Aktueller Code aus der App</label>
+            <input
+              id="mfa-current"
+              className="mono"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={7}
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </div>
+          <FormError error={mode === 'codes' ? renew.error : disable.error} />
+          <div className="form-actions">
+            <button type="button" className="btn btn--outline" onClick={reset}>
+              Abbrechen
+            </button>
+            <button type="submit" className="btn btn--primary" disabled={renew.isPending || disable.isPending}>
+              {(renew.isPending || disable.isPending) && <Spinner />} {mode === 'codes' ? 'Neue Codes erzeugen' : 'Ausschalten'}
+            </button>
+          </div>
+        </form>
+      ) : sec.mfaEnabled ? (
+        <>
+          <p className="small">
+            Noch {sec.recoveryCodesLeft} von 10 Wiederherstellungscodes übrig.
+            {sec.recoveryCodesLeft <= 3 && ' Bitte bald neue erzeugen.'}
+          </p>
+          <div className="form-actions">
+            <button type="button" className="btn btn--outline btn--sm" onClick={() => setMode('codes')}>
+              Neue Wiederherstellungscodes
+            </button>
+            {!sec.mfaRequired && (
+              <button type="button" className="btn btn--outline btn--sm" onClick={() => setMode('disable')}>
+                Ausschalten
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="form-actions">
+          <button type="button" className="btn btn--primary" onClick={() => setMode('setup')}>
+            <Smartphone aria-hidden="true" /> Einrichten
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SessionsSection() {
+  const { logoutEverywhere } = useAuth();
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="card card--pad stack">
       <h2 className="section-title">
-        <KeyRound aria-hidden="true" /> Passwort ändern
+        <LogOut aria-hidden="true" /> Angemeldete Geräte
       </h2>
       <p className="muted small">
-        Angemeldet als {me.user.name} ({me.user.email}). Nach der Änderung werden Sie auf allen anderen Geräten abgemeldet.
+        Sie bleiben höchstens 14 Tage angemeldet und werden nach 8 Stunden ohne Nutzung automatisch abgemeldet. Wenn Sie ein Gerät verloren haben oder ein
+        fremdes Gerät benutzt haben, melden Sie sich hier überall ab.
       </p>
-      <div className="form-grid">
-        <div className="field field--full">
-          <label htmlFor="pw-current">Aktuelles Passwort</label>
-          <input id="pw-current" type="password" required autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
-        </div>
-        <div className="field">
-          <label htmlFor="pw-next">Neues Passwort</label>
-          <input id="pw-next" type="password" required minLength={10} autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
-          <p className="field__hint">Mindestens 10 Zeichen.</p>
-        </div>
-        <div className="field">
-          <label htmlFor="pw-repeat">Neues Passwort wiederholen</label>
-          <input id="pw-repeat" type="password" required autoComplete="new-password" value={f.repeat} onChange={(e) => setF({ ...f, repeat: e.target.value })} />
-          {mismatch && <p className="form-error">Die beiden Passwörter stimmen nicht überein.</p>}
-        </div>
-      </div>
-      <FormError error={change.error} />
       <div className="form-actions">
-        <button type="submit" className="btn btn--primary" disabled={change.isPending || mismatch}>
-          {change.isPending ? <Spinner /> : <Check aria-hidden="true" />} Passwort ändern
+        <button
+          type="button"
+          className="btn btn--outline"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void logoutEverywhere();
+          }}
+        >
+          {busy ? <Spinner /> : <LogOut aria-hidden="true" />} Auf allen Geräten abmelden
         </button>
-        <Saved show={saved} />
       </div>
-    </form>
+    </section>
   );
 }
 
