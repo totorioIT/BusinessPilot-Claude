@@ -6,7 +6,6 @@ export const IMPRINT = {
   city: '85049 Ingolstadt',
   phone: '0171-2617554',
   email: 'ph.wiedamann@gmail.com',
-  // TODO: E-Mail der DSA-Kontaktstelle von Philipp bestätigen lassen.
-  dsaEmail: '[PLATZHALTER: E-Mail-Adresse der Kontaktstelle]',
+  dsaEmail: 'ph.wiedamann@gmail.com',
   dsaLanguages: 'Deutsch, Englisch',
 };
