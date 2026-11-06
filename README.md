@@ -50,6 +50,18 @@ Ein systemd-Timer holt alle 5 Minuten neue Commits von `main` und baut neu (`dep
 `/api/health` zeigt den laufenden Commit. Die Website ist statisch und wird mit
 `npm run build -w @bp/website` gebaut.
 
+**Backup:** Jede Nacht um 03:30 schreibt `deploy/backup.sh` einen Datenbank-Dump nach
+`/var/backups/rufanna` (nur für root lesbar, 14 Tage aufbewahrt). Sofort ein Backup anlegen:
+`sudo systemctl start businesspilot-backup`. Die Backups liegen auf demselben Server; für den
+Ernstfall (Server weg) sollten sie zusätzlich an einen zweiten Ort kopiert werden.
+
+**Backup wiederherstellen** (überschreibt die aktuelle Datenbank):
+
+```bash
+cd /opt/businesspilot
+gunzip -c /var/backups/rufanna/<datei>.sql.gz | sudo docker compose exec -T db psql -U bp businesspilot
+```
+
 ## fonio anbinden
 
 Im Dashboard unter Integrationen „fonio verbinden“ erzeugt einen API-Schlüssel (wird einmal angezeigt).

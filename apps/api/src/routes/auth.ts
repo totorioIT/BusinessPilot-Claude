@@ -170,6 +170,10 @@ export async function authRoutes(app: FastifyInstance) {
     if (!token) throw new HttpError(401, 'challenge_expired', 'Die Anmeldung ist abgelaufen. Bitte erneut mit E-Mail und Passwort anmelden.');
     const [user] = await db.select().from(users).where(eq(users.id, token.userId));
     if (!user?.mfaSecret) throw new HttpError(401, 'challenge_expired', 'Die Anmeldung ist abgelaufen. Bitte erneut mit E-Mail und Passwort anmelden.');
+    // Each challenge allows only a few tries, but someone with the password could fetch new ones:
+    // wrong codes therefore also count per account, across all challenges.
+    const mfaKey = `mfa:${user.id}`;
+    if (lockedOut(mfaKey)) throw new HttpError(429, 'locked', 'Zu viele falsche Versuche. Bitte in 15 Minuten erneut versuchen.');
 
     const step = await verifyTotp(user.mfaSecret, body.code, user.mfaLastStep);
     let how = ' (mit Zwei-Faktor-Code)';
@@ -184,6 +188,7 @@ export async function authRoutes(app: FastifyInstance) {
     } else {
       const remaining = useRecoveryCode(user.mfaRecoveryCodes, body.code);
       if (!remaining) {
+        recordFailure(mfaKey);
         const attempts = token.attempts + 1;
         if (attempts >= MFA_MAX_ATTEMPTS) await db.delete(authTokens).where(eq(authTokens.id, token.id));
         else await db.update(authTokens).set({ attempts }).where(eq(authTokens.id, token.id));
@@ -192,6 +197,7 @@ export async function authRoutes(app: FastifyInstance) {
       await db.update(users).set({ mfaRecoveryCodes: remaining }).where(eq(users.id, user.id));
       how = ` (mit Wiederherstellungscode, noch ${remaining.length} übrig)`;
     }
+    failures.delete(mfaKey);
     await db.delete(authTokens).where(eq(authTokens.id, token.id));
     return finishLogin(reply, user, how);
   });
