@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { canEncrypt } from './secretbox.js';
 
 // Links in customer emails (unsubscribe, confirm consent) carry a signed token instead of a
@@ -6,7 +6,11 @@ import { canEncrypt } from './secretbox.js';
 // The signature uses APP_SECRET, which lives only in the server's .env.
 
 export type LinkPurpose = 'unsubscribe' | 'confirm';
-export type LinkClaims = { p: LinkPurpose; t: string; c: string; ch: string; exp?: number };
+/** `e` binds a confirmation link to the address it was sent to (see emailFingerprint). */
+export type LinkClaims = { p: LinkPurpose; t: string; c: string; ch: string; exp?: number; e?: string };
+
+/** Short hash of an email address, so a link stops working when the customer's address changes. */
+export const emailFingerprint = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('base64url').slice(0, 16);
 
 function mac(payload: string): Buffer {
   const secret = process.env.APP_SECRET;

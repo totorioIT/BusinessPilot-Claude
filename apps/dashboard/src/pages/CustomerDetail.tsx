@@ -123,6 +123,7 @@ export function CustomerDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['customer', id] });
       qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['consents', id] }); // a new email address resets email consent
       setEditOpen(false);
     },
   });

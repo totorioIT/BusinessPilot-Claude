@@ -80,6 +80,32 @@ export interface Me {
   /** Alle Betriebe, in denen der Benutzer Mitglied ist. */
   tenants: { id: string; name: string; role: Role }[];
   ai: { name: string };
+  security: {
+    mfaEnabled: boolean;
+    /** Pflicht für Plattform-Admin und Inhaber. */
+    mfaRequired: boolean;
+    recoveryCodesLeft: number;
+    /** Gesetzt, solange zuerst das Startpasswort geändert oder die Zwei-Faktor-Anmeldung eingerichtet werden muss. */
+    restriction: 'password_change' | 'mfa_setup' | null;
+  };
+}
+
+/** Antwort auf /auth/login: entweder angemeldet oder der zweite Schritt ist nötig. */
+export type LoginResult = Me | { mfaRequired: true; challenge: string };
+export const needsSecondFactor = (r: LoginResult): r is { mfaRequired: true; challenge: string } => 'mfaRequired' in r;
+
+export interface MfaSetup {
+  secret: string;
+  uri: string;
+  qrSvg: string;
+}
+
+export interface SystemEmailSettings {
+  configured: boolean;
+  senderEmail: string | null;
+  keyHint: string | null;
+  account: string | null;
+  canStoreSecrets: boolean;
 }
 
 export type ActorType = 'user' | 'ai' | 'system' | 'provider';

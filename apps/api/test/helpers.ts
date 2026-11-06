@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { buildApp } from '../src/app.js';
 import { createDb } from '../src/db/client.js';
@@ -7,6 +8,11 @@ import { DEMO_EMAIL, DEMO_FONIO_KEY, DEMO_PASSWORD, seed } from '../src/db/seed.
 export const TEST_DB = process.env.TEST_DATABASE_URL ?? 'postgres://bp@localhost:5432/businesspilot_test';
 
 export async function setup() {
+  // Two-factor login is tested on its own (test/auth-security.test.ts); here it would block every login.
+  process.env.MFA_ENFORCE ??= 'false';
+  // Tests never call the Pwned Passwords service; a password counts as leaked when it
+  // appears in LEAKED_PASSWORDS.
+  stubPwnedPasswords();
   const { db, pool } = createDb(TEST_DB);
   await db.execute(sql`drop schema if exists public cascade; drop schema if exists drizzle cascade; create schema public;`);
   await runMigrations(TEST_DB);
@@ -40,4 +46,23 @@ export function nextWeekday(minDays = 3) {
   const d = new Date(Date.now() + minDays * 86400000);
   while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+/** Passwords the stubbed Pwned Passwords service reports as leaked. */
+export const LEAKED_PASSWORDS = ['Passwort123456!', 'Sommer2026Sommer'];
+
+let stubbed = false;
+function stubPwnedPasswords() {
+  if (stubbed) return;
+  stubbed = true;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    const m = url.match(/^https:\/\/api\.pwnedpasswords\.com\/range\/([0-9A-F]{5})$/);
+    if (!m) return realFetch(input, init);
+    const lines = LEAKED_PASSWORDS.map((pw) => createHash('sha1').update(pw).digest('hex').toUpperCase())
+      .filter((h) => h.startsWith(m[1]))
+      .map((h) => `${h.slice(5)}:42`);
+    return new Response(lines.join('\r\n'), { status: 200 });
+  }) as typeof fetch;
 }

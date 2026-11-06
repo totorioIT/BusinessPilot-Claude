@@ -14,15 +14,30 @@ Conventions
 ## Auth
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | /auth/login | `{email, password}` | `Me` |
+| POST | /auth/login | `{email, password}` | `Me`, or `{mfaRequired:true, challenge}` when two-factor login is on (no session yet) |
+| POST | /auth/mfa/verify | `{challenge, code}` (6-digit code or recovery code) | `Me`; challenge valid 5 min, dropped after 5 wrong codes |
 | POST | /auth/logout | – | `{ok:true}` |
+| POST | /auth/logout-all | – | `{ok:true}`; ends every session of the user |
 | GET | /auth/me | – | `Me` |
-| POST | /auth/tenant | `{tenantId}` | `Me` for the new tenant (403 unless member or platform admin) |
-| POST | /auth/password | `{current, next}` (min 10) | `{ok:true}`; signs out the user's other sessions |
+| POST | /auth/tenant | `{tenantId}` | `Me` for the new tenant (403 unless member or platform admin); issues a new session token |
+| POST | /auth/password | `{current, next}` | `Me`; signs out the user's other sessions |
+| POST | /auth/password-reset/request | `{email}` | always `{ok:true, message}`; mails a link `…/passwort-zuruecksetzen#<token>` (30 min, single use) |
+| POST | /auth/password-reset/confirm | `{token, password}` | `{ok:true}`; ends all sessions; 400 `invalid_token` |
+| POST | /auth/mfa/setup | – | `{secret, uri, qrSvg}` |
+| POST | /auth/mfa/enable | `{code}` | `{recoveryCodes:string[10], me}`; ends other sessions, new session token |
+| POST | /auth/mfa/recovery-codes | `{code}` | `{recoveryCodes}` (replaces the old ones) |
+| POST | /auth/mfa/disable | `{password, code}` | `Me`; 403 where MFA is required |
 
-`Me = { user:{id,name,email,isPlatformAdmin}, tenant:{id,name,industry,timezone}, role:'owner'|'admin'|'staff', support:boolean, tenants:[{id,name,role}], ai:{name} }`
+`Me = { user:{id,name,email,isPlatformAdmin}, tenant:{id,name,industry,timezone}, role:'owner'|'admin'|'staff', support:boolean, tenants:[{id,name,role}], ai:{name}, security:{mfaEnabled, mfaRequired, recoveryCodesLeft, restriction:'password_change'|'mfa_setup'|null} }`
 
 A session belongs to one tenant at a time. `POST /auth/tenant` switches it. A platform admin may open any tenant: they act there with owner rights, `support` is true, and the tenant's activity log records the access. `tenants` lists only real memberships.
+
+Security rules:
+- Passwords: Argon2id (19 MiB, 2 iterations); old scrypt hashes are replaced at the next login. New passwords need 12+ characters, must not contain the e-mail and must not appear in the Pwned Passwords list (k-anonymity range API; if it is unreachable only the length rules apply). Errors `weak_password`, `breached_password`.
+- Sessions: 14 days absolute, 8 hours without requests ends them. Cookie `bp_session` is HttpOnly, SameSite=Lax, Secure on HTTPS; only its SHA-256 is stored.
+- Two-factor login (TOTP, otplib) is required for platform admins and owners (`MFA_ENFORCE=false` switches this off, for tests only). Start passwords from invitations must be changed at the first login. While `restriction` is set, every other endpoint answers 403 `password_change_required` / `mfa_setup_required`.
+- Emergency: `docker compose exec app node apps/api/dist/db/mfa-reset.js <email>` switches two-factor login off for one account; platform admins can do the same for others via `POST /admin/users/mfa-reset {email}`.
+- Platform mails (password reset) use the Brevo key under Admin (`GET/PUT/DELETE /admin/system-email`), otherwise the Brevo integration of a business the user belongs to.
 
 ## Dashboard
 `GET /dashboard?days=30` →

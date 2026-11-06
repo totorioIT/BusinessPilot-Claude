@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { customers, tenants } from '../db/schema.js';
-import { verifyLink, type LinkClaims, type LinkPurpose } from '../lib/signed-links.js';
+import { emailFingerprint, verifyLink, type LinkClaims, type LinkPurpose } from '../lib/signed-links.js';
 import { marketingConsents, setMarketingConsent, type ConsentChannel } from '../services/consents.js';
 
 // Pages customers reach from links in emails, without logging in. The token in the link is
@@ -41,11 +41,15 @@ export async function publicRoutes(app: FastifyInstance) {
     const claims: LinkClaims | null = typeof token === 'string' ? verifyLink(token, purpose) : null;
     if (!claims || (claims.ch !== 'email' && claims.ch !== 'whatsapp')) return null;
     const [row] = await db
-      .select({ customerId: customers.id, tenantName: tenants.name })
+      .select({ customerId: customers.id, email: customers.email, tenantName: tenants.name })
       .from(customers)
       .innerJoin(tenants, eq(tenants.id, customers.tenantId))
       .where(and(eq(customers.tenantId, claims.t), eq(customers.id, claims.c)));
-    return row ? { ...row, tenantId: claims.t, channel: claims.ch as ConsentChannel } : null;
+    if (!row) return null;
+    // A confirmation only counts for the address it was sent to. If the business has changed the
+    // customer's email since, the old link must not grant consent for the new address.
+    if (purpose === 'confirm' && claims.ch === 'email' && (!row.email || claims.e !== emailFingerprint(row.email))) return null;
+    return { customerId: row.customerId, tenantName: row.tenantName, tenantId: claims.t, channel: claims.ch as ConsentChannel };
   };
   const tokenOf = (query: unknown) => (query as { t?: unknown }).t;
   const formFor = (path: string, token: string, label: string) =>

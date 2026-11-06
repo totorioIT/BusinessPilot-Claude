@@ -57,6 +57,17 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   isPlatformAdmin: boolean('is_platform_admin').notNull().default(false),
+  /** Set for start passwords: the person has to choose their own before doing anything else. */
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
+  /** TOTP secret (encrypted with APP_SECRET) once two-factor login is switched on. */
+  mfaSecret: text('mfa_secret'),
+  /** Secret shown during setup, until the first code confirms it. */
+  mfaPendingSecret: text('mfa_pending_secret'),
+  mfaEnabledAt: timestamp('mfa_enabled_at', { withTimezone: true }),
+  /** Last accepted TOTP time step, so a code can't be used twice. */
+  mfaLastStep: integer('mfa_last_step'),
+  /** sha256 hashes of unused recovery codes. */
+  mfaRecoveryCodes: jsonb('mfa_recovery_codes').$type<string[]>().notNull().default([]),
   createdAt: createdAt(),
 });
 
@@ -79,8 +90,26 @@ export const sessions = pgTable('sessions', {
     .references(() => users.id, { onDelete: 'cascade' }),
   tenantId: tenantId(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  /** Sessions end after a period without requests (see SESSION_IDLE_MS). */
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: createdAt(),
 });
+
+/** One-time tokens for password reset and the second login step; stored only as sha256. */
+export const authTokens = pgTable(
+  'auth_tokens',
+  {
+    id: id(), // sha256 of the token
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    purpose: text('purpose').$type<'password_reset' | 'mfa_login'>().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index('auth_tokens_user').on(t.userId, t.purpose)],
+);
 
 export const staffMembers = pgTable('staff_members', {
   id: id(),

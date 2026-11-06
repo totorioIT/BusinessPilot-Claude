@@ -19,7 +19,7 @@ export function OneTimeAccess({ access, name }: { access: NewAccess; name: strin
       <div>
         <CopyButton value={text} label="Zugangsdaten kopieren" />
       </div>
-      <span className="small muted">Nach der ersten Anmeldung unter Einstellungen → Konto ein eigenes Passwort setzen.</span>
+      <span className="small muted">Bei der ersten Anmeldung muss ein eigenes Passwort gewählt werden.</span>
     </div>
   );
 }

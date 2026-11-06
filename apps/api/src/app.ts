@@ -9,7 +9,7 @@ import type { Db } from './db/client.js';
 import { memberships, sessions, users } from './db/schema.js';
 import { sha256 } from './lib/crypto.js';
 import { HttpError } from './lib/errors.js';
-import { authRoutes, SESSION_COOKIE } from './routes/auth.js';
+import { authRoutes, restrictionFor, SESSION_COOKIE, SESSION_IDLE_MS } from './routes/auth.js';
 import { crmRoutes } from './routes/crm.js';
 import { inboxRoutes } from './routes/inbox.js';
 import { schedulingRoutes } from './routes/scheduling.js';
@@ -21,6 +21,18 @@ import { adminRoutes } from './routes/admin.js';
 import { marketingRoutes } from './routes/marketing.js';
 import { publicRoutes } from './routes/public.js';
 import { setPublicUrl } from './services/automations.js';
+
+/** What a restricted session may still do (see restrictionFor). */
+const RESTRICTED_ALLOWED = new Set([
+  'GET /api/auth/me',
+  'POST /api/auth/logout',
+  'POST /api/auth/logout-all',
+  'POST /api/auth/password',
+  'POST /api/auth/mfa/setup',
+  'POST /api/auth/mfa/enable',
+]);
+
+export const redactUrl = (url: string) => url.split('?')[0].replace(/\/wh_[^/]+/g, '/wh_[redacted]');
 
 export type AppOptions = {
   db: Db;
@@ -39,7 +51,19 @@ declare module 'fastify' {
 }
 
 export async function buildApp(opts: AppOptions) {
-  const app = Fastify({ logger: opts.logger ?? false, trustProxy: true, bodyLimit: 1_000_000 });
+  const app = Fastify({
+    // Request logs keep only the path: query strings carry signed links and OAuth codes, and the
+    // WhatsApp webhook path carries its secret, none of which belong in server logs.
+    logger: opts.logger
+      ? {
+          serializers: {
+            req: (req) => ({ method: req.method, url: redactUrl(req.url), remoteAddress: req.ip }),
+          },
+        }
+      : false,
+    trustProxy: true,
+    bodyLimit: 1_000_000,
+  });
   app.decorate('db', opts.db);
   app.decorate('publicUrl', opts.publicUrl);
   setPublicUrl(opts.publicUrl);
@@ -61,24 +85,55 @@ export async function buildApp(opts: AppOptions) {
   });
 
   // Resolve the session cookie on every /api request; routes call auth(req) to require it.
-  app.addHook('onRequest', async (req) => {
+  // A session ends 14 days after login or after SESSION_IDLE_MS without requests.
+  app.addHook('onRequest', async (req, reply) => {
     if (!req.url.startsWith('/api/') || req.url.startsWith('/api/voice/')) return;
     const token = req.cookies[SESSION_COOKIE];
     if (!token) return;
+    const now = new Date();
     const [row] = await opts.db
       .select({
+        sessionId: sessions.id,
+        lastSeenAt: sessions.lastSeenAt,
         userId: users.id,
         userName: users.name,
         isPlatformAdmin: users.isPlatformAdmin,
+        mustChangePassword: users.mustChangePassword,
+        mfaEnabledAt: users.mfaEnabledAt,
         tenantId: sessions.tenantId,
         role: memberships.role,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
       .leftJoin(memberships, and(eq(memberships.userId, sessions.userId), eq(memberships.tenantId, sessions.tenantId)))
-      .where(and(eq(sessions.id, sha256(token)), gt(sessions.expiresAt, new Date())));
+      .where(and(eq(sessions.id, sha256(token)), gt(sessions.expiresAt, now), gt(sessions.lastSeenAt, new Date(now.getTime() - SESSION_IDLE_MS))));
     // Platform admins may open any tenant for support; they act there with owner rights.
-    if (row && (row.role || row.isPlatformAdmin)) req.auth = { ...row, role: row.role ?? 'owner', support: !row.role };
+    if (!row || !(row.role || row.isPlatformAdmin)) return;
+    // Recording activity at most every five minutes keeps writes low.
+    if (now.getTime() - row.lastSeenAt.getTime() > 5 * 60_000) {
+      await opts.db.update(sessions).set({ lastSeenAt: now }).where(eq(sessions.id, row.sessionId));
+    }
+    const restriction = restrictionFor(row, row.role);
+    req.auth = {
+      userId: row.userId,
+      userName: row.userName,
+      isPlatformAdmin: row.isPlatformAdmin,
+      tenantId: row.tenantId,
+      role: row.role ?? 'owner',
+      support: !row.role,
+      restriction,
+    };
+    // Until the start password is changed or two-factor login is set up, only those steps work.
+    const path = req.url.split('?')[0];
+    if (restriction && !RESTRICTED_ALLOWED.has(`${req.method} ${path}`)) {
+      return reply.status(403).send({
+        error: restriction === 'password_change' ? 'password_change_required' : 'mfa_setup_required',
+        message:
+          restriction === 'password_change'
+            ? 'Bitte zuerst ein eigenes Passwort festlegen.'
+            : 'Bitte zuerst die Zwei-Faktor-Anmeldung einrichten.',
+      });
+    }
   });
 
   // Basic CSRF protection for cookie-authenticated writes: browsers always send Origin on

@@ -10,6 +10,7 @@ import { newId, randomCode } from '../lib/ids.js';
 import { automationHooks } from '../services/automations.js';
 import { appointmentDto, appointmentsQuery } from './scheduling.js';
 import { conversationListItems } from './inbox.js';
+import { marketingConsents, setMarketingConsent } from '../services/consents.js';
 
 export const LEAD_STAGES = [
   { key: 'new', label: 'Neue Anfrage' },
@@ -165,8 +166,24 @@ export async function crmRoutes(app: FastifyInstance) {
     const a = auth(req);
     const { id } = req.params as { id: string };
     const body = parse(customerBody.partial(), req.body);
+    const [before] = await db.select({ email: customers.email }).from(customers).where(and(eq(customers.tenantId, a.tenantId), eq(customers.id, id)));
+    if (!before) throw notFound('Kunde');
     const [c] = await db.update(customers).set(body).where(and(eq(customers.tenantId, a.tenantId), eq(customers.id, id))).returning();
     if (!c) throw notFound('Kunde');
+    // Email consent belongs to the address the customer agreed with. A new address needs a new confirmation.
+    if ((before.email ?? '').trim().toLowerCase() !== (c.email ?? '').trim().toLowerCase()) {
+      const current = (await marketingConsents(db, a.tenantId, c.id)).find((x) => x.channel === 'email');
+      if (current?.status === 'granted' || current?.status === 'pending') {
+        await setMarketingConsent(db, {
+          tenantId: a.tenantId,
+          customerId: c.id,
+          channel: 'email',
+          status: 'revoked',
+          source: 'E-Mail-Adresse geändert, bitte neu bestätigen lassen',
+          actor: userActor(a),
+        });
+      }
+    }
     await recordEvent(db, { tenantId: a.tenantId, type: 'customer.updated', actor: userActor(a), summary: `Kunde ${c.name} bearbeitet`, entityType: 'customer', entityId: c.id });
     const { tenantId: _t, ...dto } = c;
     return dto;

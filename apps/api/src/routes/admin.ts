@@ -3,6 +3,9 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { memberships, sessions, staffMembers, tenants, users } from '../db/schema.js';
 import { hashPassword, newToken } from '../lib/crypto.js';
+import { canEncrypt } from '../lib/secretbox.js';
+import { brevoAccount } from '../providers/brevo.js';
+import { clearSystemEmailSettings, getSystemEmailSettings, saveSystemEmailSettings } from '../services/system-email.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { recordEvent } from '../lib/events.js';
 import { auth, parse, requireRole, userActor } from '../lib/http.js';
@@ -40,7 +43,8 @@ export async function adminRoutes(app: FastifyInstance) {
     }
     const password = startPassword();
     const userId = newId('usr');
-    await db.insert(users).values({ id: userId, email: p.email, name: p.name, passwordHash: await hashPassword(password) });
+    // The start password is shown once; the person has to replace it at the first login.
+    await db.insert(users).values({ id: userId, email: p.email, name: p.name, passwordHash: await hashPassword(password), mustChangePassword: true });
     await db.insert(memberships).values({ userId, tenantId, role });
     return { userId, startPassword: password };
   };
@@ -116,8 +120,20 @@ export async function adminRoutes(app: FastifyInstance) {
     const { userId } = req.params as { userId: string };
     const { role } = parse(z.object({ role: z.enum(['owner', 'admin', 'staff']) }), req.body);
     if (userId === a.userId) throw badRequest('Die eigene Rolle kann man nicht selbst ändern.');
-    const [row] = await db.update(memberships).set({ role }).where(and(eq(memberships.tenantId, a.tenantId), eq(memberships.userId, userId))).returning();
-    if (!row) throw notFound('Zugang');
+    const [before] = await db.select().from(memberships).where(and(eq(memberships.tenantId, a.tenantId), eq(memberships.userId, userId)));
+    if (!before) throw notFound('Zugang');
+    await db.update(memberships).set({ role }).where(and(eq(memberships.tenantId, a.tenantId), eq(memberships.userId, userId)));
+    if (before.role !== role) {
+      const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
+      const label = { owner: 'Inhaber', admin: 'Admin', staff: 'Mitarbeiter' };
+      await recordEvent(db, {
+        tenantId: a.tenantId,
+        type: 'user.role_changed',
+        actor: userActor(a),
+        summary: `Rolle von ${u?.name ?? 'Nutzer'} geändert: ${label[before.role]} → ${label[role]}`,
+        data: { userId, from: before.role, to: role },
+      });
+    }
     return { ok: true, role };
   });
 
@@ -132,6 +148,57 @@ export async function adminRoutes(app: FastifyInstance) {
     await db.delete(sessions).where(and(eq(sessions.userId, userId), eq(sessions.tenantId, a.tenantId)));
     const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
     await recordEvent(db, { tenantId: a.tenantId, type: 'user.removed', actor: userActor(a), summary: `Zugang von ${u?.name ?? 'Nutzer'} entfernt` });
+    return { ok: true };
+  });
+
+  // Mails from the platform itself (password reset): Brevo key and sender for the whole platform.
+  app.get('/admin/system-email', async (req) => {
+    if (!auth(req).isPlatformAdmin) throw forbidden();
+    return { ...(await getSystemEmailSettings(db)), canStoreSecrets: canEncrypt() };
+  });
+
+  app.put('/admin/system-email', async (req) => {
+    const a = auth(req);
+    if (!a.isPlatformAdmin) throw forbidden();
+    if (!canEncrypt()) throw badRequest('Auf dem Server fehlt APP_SECRET, deshalb kann kein Schlüssel gespeichert werden.');
+    const body = parse(
+      z.object({
+        apiKey: z.string().trim().min(20, 'Der Brevo-Schlüssel ist zu kurz.').max(300),
+        senderEmail: z.string().trim().toLowerCase().email('Bitte eine gültige Absender-Adresse angeben').max(200),
+      }),
+      req.body,
+    );
+    let account: { email: string };
+    try {
+      account = await brevoAccount(body.apiKey);
+    } catch (err) {
+      throw badRequest(err instanceof Error ? err.message : 'Brevo ist nicht erreichbar.', 'provider_rejected');
+    }
+    await saveSystemEmailSettings(db, { apiKey: body.apiKey, senderEmail: body.senderEmail, account: account.email });
+    await recordEvent(db, { tenantId: a.tenantId, type: 'platform.system_email_updated', actor: userActor(a), summary: 'E-Mail-Zugang für Systemnachrichten gespeichert' });
+    return { ...(await getSystemEmailSettings(db)), canStoreSecrets: true };
+  });
+
+  app.delete('/admin/system-email', async (req) => {
+    if (!auth(req).isPlatformAdmin) throw forbidden();
+    await clearSystemEmailSettings(db);
+    return { ...(await getSystemEmailSettings(db)), canStoreSecrets: canEncrypt() };
+  });
+
+  /** For someone who lost both phone and recovery codes. Platform admins only, never for themselves. */
+  app.post('/admin/users/mfa-reset', async (req) => {
+    const a = auth(req);
+    if (!a.isPlatformAdmin) throw forbidden();
+    const { email } = parse(z.object({ email: z.string().trim().toLowerCase().email() }), req.body);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    if (!user) throw notFound('Zugang');
+    if (user.id === a.userId) throw badRequest('Die eigene Zwei-Faktor-Anmeldung kann man nicht selbst zurücksetzen.');
+    await db.update(users).set({ mfaSecret: null, mfaPendingSecret: null, mfaEnabledAt: null, mfaLastStep: null, mfaRecoveryCodes: [] }).where(eq(users.id, user.id));
+    await db.delete(sessions).where(eq(sessions.userId, user.id));
+    const own = await db.select({ tenantId: memberships.tenantId }).from(memberships).where(eq(memberships.userId, user.id));
+    for (const m of own) {
+      await recordEvent(db, { tenantId: m.tenantId, type: 'user.mfa_reset', actor: userActor(a), summary: `Zwei-Faktor-Anmeldung von ${user.name} durch den BusinessPilot-Support zurückgesetzt` });
+    }
     return { ok: true };
   });
 }
