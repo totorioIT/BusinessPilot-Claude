@@ -27,7 +27,7 @@ const cols = [
               {isRec && <span class="prec__flag">Empfohlen für {industry.audience}</span>}
             </div>
             <h3 class="prec__pos">{plan.positioning}</h3>
-            <p class="prec__price"><strong>{plan.priceMonthly}</strong> / Monat · {plan.onboarding}</p>
+            <p class="prec__price"><strong>{plan.priceMonthly}</strong> / Monat · {plan.onboarding} · netto zzgl. MwSt.</p>
             <ul>
               {points.map((p) => <li><Icon name="check" size={18} /> {p}</li>)}
             </ul>

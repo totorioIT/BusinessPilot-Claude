@@ -3,6 +3,8 @@ import { useAuth } from './auth';
 import { Layout } from './components/Layout';
 import { ErrorState, FullPageLoader } from './components/ui';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SecuritySetupPage } from './pages/Login';
+import { ImpressumPage } from './pages/Impressum';
+import { DatenschutzPage } from './pages/Datenschutz';
 import { DashboardPage } from './pages/Dashboard';
 import { InboxPage } from './pages/Inbox';
 import { PhonePage } from './pages/Phone';
@@ -54,6 +56,8 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
       <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
+      <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
       <Route element={<Protected />}>
         <Route index element={<DashboardPage />} />
         <Route path="inbox" element={<InboxPage />} />

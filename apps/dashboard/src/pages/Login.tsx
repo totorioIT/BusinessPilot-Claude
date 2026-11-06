@@ -17,6 +17,10 @@ function AuthShell({ children }: { children: ReactNode }) {
         <p>Dein digitaler Mitarbeiter</p>
       </div>
       <div className="login__card card">{children}</div>
+      <nav className="login__legal" aria-label="Rechtliches">
+        <Link to="/impressum">Impressum</Link>
+        <Link to="/datenschutz">Datenschutz</Link>
+      </nav>
     </div>
   );
 }

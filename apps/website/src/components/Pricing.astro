@@ -27,9 +27,11 @@ import { plans } from '../data/plans';
         </li>
       ))}
     </ul>
+    <p class="pricing__note">Alle Preise netto zzgl. gesetzlicher Mehrwertsteuer. Das Angebot richtet sich ausschließlich an Unternehmer im Sinne von § 14 BGB.</p>
   </div>
 </section>
 <style>
+  .pricing__note { margin-top: 24px; text-align: center; font-size: .875rem; color: var(--text-muted); }
   .pricing { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
   .plan { position: relative; padding: 32px 28px; display: flex; flex-direction: column; gap: 8px; }
   .plan--highlight { background: var(--navy-900); color: var(--white); border-color: var(--navy-900); box-shadow: 0 0 0 3px var(--green-500), var(--shadow); }

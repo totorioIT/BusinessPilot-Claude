@@ -35,6 +35,10 @@ const year = new Date().getFullYear();
   </div>
   <div class="container site-footer__bottom">
     <span>© {year} BusinessPilot</span>
+    <nav aria-label="Rechtliches" class="site-footer__legal">
+      <a href="/impressum">Impressum</a>
+      <a href="/datenschutz">Datenschutz</a>
+    </nav>
   </div>
 </footer>
 <style>
@@ -45,7 +49,9 @@ const year = new Date().getFullYear();
   .site-footer ul { list-style: none; display: grid; gap: 10px; }
   .site-footer a { text-decoration: none; font-size: .9375rem; }
   .site-footer a:hover { color: var(--white); }
-  .site-footer__bottom { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--navy-line); font-size: .875rem; }
+  .site-footer__bottom { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--navy-line); font-size: .875rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; }
+  .site-footer__legal { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .site-footer__legal a { font-size: .875rem; }
   @media (max-width: 860px) { .site-footer__grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 520px) { .site-footer__grid { grid-template-columns: 1fr; } }
 </style>
