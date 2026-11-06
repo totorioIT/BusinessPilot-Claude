@@ -87,6 +87,47 @@ describe('CRM', () => {
     assert.match(q.body.number, /^AN-\d+$/);
   });
 
+  it('refuses a lead from another tenant on a quote', async () => {
+    const [other] = await t.db.select().from(s.tenants).where(eq(s.tenants.name, 'Beauty Lounge Lena'));
+    await t.db.insert(s.leads).values({ id: 'led_OTHERTENANT01', tenantId: other.id, title: 'Fremd', stage: 'new' });
+    const q = await t.api('POST', '/quotes', { title: 'X', leadId: 'led_OTHERTENANT01' });
+    assert.equal(q.status, 404);
+  });
+
+  it('erases a customer with everything recorded about them', async () => {
+    const c = await t.api('POST', '/customers', { name: 'Lösch Mich', phone: '+49 171 5559999' });
+    const id = c.body.id as string;
+    await t.api('POST', `/customers/${id}/assets`, { kind: 'vehicle', label: 'Golf', identifier: 'M-LM 1' });
+    const tenantId = c.body.tenantId ?? (await t.api('GET', '/auth/me')).body.tenant.id;
+    await t.db.insert(s.conversations).values({ id: 'cnv_ERASE01', tenantId, customerId: id, channel: 'phone', status: 'closed', contactName: 'Lösch Mich', contactAddress: '+491715559999' });
+    await t.db.insert(s.messages).values({ id: 'msg_ERASE01', tenantId, conversationId: 'cnv_ERASE01', direction: 'inbound', author: 'customer', text: 'Hallo' });
+    const past = new Date(Date.now() - 7 * 86400_000);
+    await t.db.insert(s.appointments).values({ id: 'apt_ERASE01', tenantId, customerId: id, title: 'Inspektion', startsAt: past, endsAt: new Date(past.getTime() + 3600_000), status: 'completed', confirmationCode: 'ERASE1' });
+    await t.db.insert(s.tasks).values({ id: 'tsk_ERASE01', tenantId, title: 'Lösch Mich zurückrufen', entityType: 'customer', entityId: id });
+    const lead = await t.api('POST', '/leads', { title: 'Anfrage Lösch Mich', customerId: id, stage: 'new' });
+    await t.api('POST', '/quotes', { title: 'Angebot', customerId: id, leadId: lead.body.id });
+
+    // An upcoming appointment must be cancelled first.
+    const future = new Date(Date.now() + 7 * 86400_000);
+    await t.db.insert(s.appointments).values({ id: 'apt_ERASE02', tenantId, customerId: id, title: 'Reifen', startsAt: future, endsAt: new Date(future.getTime() + 3600_000), status: 'booked', confirmationCode: 'ERASE2' });
+    const blocked = await t.api('DELETE', `/customers/${id}`);
+    assert.equal(blocked.status, 409);
+    await t.db.update(s.appointments).set({ status: 'cancelled' }).where(eq(s.appointments.id, 'apt_ERASE02'));
+
+    const del = await t.api('DELETE', `/customers/${id}`);
+    assert.equal(del.status, 200);
+    assert.equal((await t.api('GET', `/customers/${id}`)).status, 404);
+    assert.equal((await t.db.select().from(s.customerAssets).where(eq(s.customerAssets.customerId, id))).length, 0);
+    assert.equal((await t.db.select().from(s.conversations).where(eq(s.conversations.id, 'cnv_ERASE01'))).length, 0);
+    assert.equal((await t.db.select().from(s.messages).where(eq(s.messages.id, 'msg_ERASE01'))).length, 0);
+    assert.equal((await t.db.select().from(s.appointments).where(and(eq(s.appointments.tenantId, tenantId), eq(s.appointments.title, 'Inspektion')))).length, 0);
+    assert.equal((await t.db.select().from(s.tasks).where(eq(s.tasks.id, 'tsk_ERASE01'))).length, 0);
+    assert.equal((await t.db.select().from(s.leads).where(eq(s.leads.title, 'Anfrage Lösch Mich'))).length, 0);
+    const log = await t.db.select().from(s.events).where(eq(s.events.tenantId, tenantId));
+    assert.ok(!log.some((e) => e.summary.includes('Lösch Mich')), 'no trace of the name in the activity log');
+    assert.ok(log.some((e) => e.type === 'customer.deleted'));
+  });
+
   it('keeps lead stage totals consistent with the cards', async () => {
     const res = await t.api('GET', '/leads');
     for (const stage of res.body.stages) {
@@ -184,15 +225,15 @@ describe('fonio voice flow', () => {
 
     const stranger = await t.voice('/fonio/inbound', { fromNumber: '+49 157 0000099' });
     const token = stranger.body.bp_session_token;
-    const byName = await t.voice('/tools/customer/lookup', { session_token: token, name: 'Max Müller' });
-    assert.equal(byName.body.result, 'found');
-    assert.equal(byName.body.verified, false);
-    assert.deepEqual(byName.body.vehicles, []);
-    const byPhone = await t.voice('/tools/customer/lookup', { session_token: token, phone: '+49 170 1234567' });
-    assert.equal(byPhone.body.verified, false, 'a number the caller only says is not their calling number');
-    assert.deepEqual(byPhone.body.vehicles, []);
-    const byPlate = await t.voice('/tools/customer/lookup', { session_token: token, plate: 'm-mm 1234' });
-    assert.deepEqual(byPlate.body.vehicles.map((v: { plate: string }) => v.plate), ['M-MM 1234'], 'only the plate the caller named');
+    // Whatever a stranger says, the answer is the same as for a customer that doesn't exist.
+    const unknown = await t.voice('/tools/customer/lookup', { session_token: token, name: 'Niemand Hier' });
+    for (const said of [{ name: 'Max Müller' }, { phone: '+49 170 1234567' }, { plate: 'm-mm 1234' }]) {
+      const res = await t.voice('/tools/customer/lookup', { session_token: token, ...said });
+      assert.equal(res.body.verified, false);
+      assert.equal(res.body.customer_name, undefined, 'no name for an unverified caller');
+      assert.equal(res.body.customer_id, undefined);
+      assert.deepEqual(res.body, unknown.body);
+    }
     for (const session_token of [own.body.bp_session_token, token]) await t.voice('/fonio/post-call', { session_token, summary: 'Identität geprüft' });
   });
 

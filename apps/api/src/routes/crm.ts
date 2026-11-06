@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DbOrTx } from '../db/client.js';
-import { customerAssets, customers, leads, quotes, staffMembers, tasks } from '../db/schema.js';
-import { notFound } from '../lib/errors.js';
+import { appointments, conversations, customerAssets, customers, events, jobs, leads, quotes, reviewRequests, staffMembers, tasks, voiceSessions } from '../db/schema.js';
+import { conflict, notFound } from '../lib/errors.js';
 import { recordEvent } from '../lib/events.js';
-import { auth, optionalString, parse, userActor, dateString } from '../lib/http.js';
+import { auth, optionalString, parse, requireRole, userActor, dateString } from '../lib/http.js';
 import { newId, randomCode } from '../lib/ids.js';
 import { automationHooks } from '../services/automations.js';
 import { appointmentDto, appointmentsQuery } from './scheduling.js';
@@ -105,6 +105,12 @@ async function ensureCustomer(db: DbOrTx, tenantId: string, customerId: string |
   if (!c) throw notFound('Kunde');
 }
 
+async function ensureLead(db: DbOrTx, tenantId: string, leadId: string | null | undefined) {
+  if (!leadId) return;
+  const [l] = await db.select({ id: leads.id }).from(leads).where(and(eq(leads.tenantId, tenantId), eq(leads.id, leadId)));
+  if (!l) throw notFound('Anfrage');
+}
+
 export async function crmRoutes(app: FastifyInstance) {
   const db = app.db;
 
@@ -187,6 +193,66 @@ export async function crmRoutes(app: FastifyInstance) {
     await recordEvent(db, { tenantId: a.tenantId, type: 'customer.updated', actor: userActor(a), summary: `Kunde ${c.name} bearbeitet`, entityType: 'customer', entityId: c.id });
     const { tenantId: _t, ...dto } = c;
     return dto;
+  });
+
+  /**
+   * Erases a customer and everything recorded about them (Art. 17 DSGVO): vehicles, consents,
+   * conversations with messages and calls, appointments, leads, quotes, review requests, tasks,
+   * pending jobs and the activity log entries about these records. Owners and admins only.
+   */
+  app.delete('/customers/:id', async (req) => {
+    const a = requireRole(req, ['owner', 'admin']);
+    const { id } = req.params as { id: string };
+    const [c] = await db.select().from(customers).where(and(eq(customers.tenantId, a.tenantId), eq(customers.id, id)));
+    if (!c) throw notFound('Kunde');
+    const t = a.tenantId;
+    const [upcoming] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(appointments)
+      .where(and(eq(appointments.tenantId, t), eq(appointments.customerId, id), inArray(appointments.status, ['booked', 'confirmed']), gt(appointments.startsAt, new Date())));
+    if (upcoming.n > 0) {
+      throw conflict('upcoming_appointments', 'Der Kunde hat noch offene Termine. Bitte sagen Sie diese zuerst ab, dann kann der Kunde gelöscht werden.');
+    }
+    await db.transaction(async (tx) => {
+      const idsOf = async (table: typeof conversations | typeof appointments | typeof leads | typeof quotes | typeof reviewRequests) =>
+        (await tx.select({ id: table.id }).from(table).where(and(eq(table.tenantId, t), eq(table.customerId, id)))).map((r) => r.id);
+      const convIds = await idsOf(conversations);
+      const aptIds = await idsOf(appointments);
+      const leadIds = await idsOf(leads);
+      const quoteIds = await idsOf(quotes);
+      const reviewIds = await idsOf(reviewRequests);
+      const assetIds = (await tx.select({ id: customerAssets.id }).from(customerAssets).where(and(eq(customerAssets.tenantId, t), eq(customerAssets.customerId, id)))).map((r) => r.id);
+      const all = [id, ...convIds, ...aptIds, ...leadIds, ...quoteIds, ...reviewIds, ...assetIds];
+
+      await tx.delete(jobs).where(
+        and(
+          eq(jobs.tenantId, t),
+          or(
+            sql`${jobs.payload}->>'customerId' = ${id}`,
+            convIds.length ? inArray(sql`${jobs.payload}->>'conversationId'`, convIds) : undefined,
+            aptIds.length ? inArray(sql`${jobs.payload}->>'appointmentId'`, aptIds) : undefined,
+            quoteIds.length ? inArray(sql`${jobs.payload}->>'quoteId'`, quoteIds) : undefined,
+          ),
+        ),
+      );
+      await tx.delete(tasks).where(and(eq(tasks.tenantId, t), inArray(tasks.entityId, all)));
+      await tx.delete(events).where(and(eq(events.tenantId, t), inArray(events.entityId, all)));
+      await tx.delete(voiceSessions).where(
+        and(eq(voiceSessions.tenantId, t), or(eq(voiceSessions.customerId, id), convIds.length ? inArray(voiceSessions.conversationId, convIds) : undefined)),
+      );
+      if (reviewIds.length) await tx.delete(reviewRequests).where(and(eq(reviewRequests.tenantId, t), inArray(reviewRequests.id, reviewIds)));
+      // Review requests of other customers can point at these appointments; set null keeps them.
+      if (quoteIds.length) await tx.delete(quotes).where(and(eq(quotes.tenantId, t), inArray(quotes.id, quoteIds)));
+      if (leadIds.length) await tx.delete(leads).where(and(eq(leads.tenantId, t), inArray(leads.id, leadIds)));
+      if (aptIds.length) await tx.delete(appointments).where(and(eq(appointments.tenantId, t), inArray(appointments.id, aptIds)));
+      // Messages and calls go with their conversation (on delete cascade).
+      if (convIds.length) await tx.delete(conversations).where(and(eq(conversations.tenantId, t), inArray(conversations.id, convIds)));
+      // Vehicles and consents go with the customer (on delete cascade).
+      await tx.delete(customers).where(and(eq(customers.tenantId, t), eq(customers.id, id)));
+      // The log keeps that a deletion happened, by whom, but nothing about the person.
+      await recordEvent(tx, { tenantId: t, type: 'customer.deleted', actor: userActor(a), summary: `Kunde Nr. ${c.number} und alle zugehörigen Daten gelöscht` });
+    });
+    return { ok: true };
   });
 
   app.post('/customers/:id/assets', async (req, reply) => {
@@ -285,6 +351,7 @@ export async function crmRoutes(app: FastifyInstance) {
     const a = auth(req);
     const body = parse(quoteBody, req.body);
     await ensureCustomer(db, a.tenantId, body.customerId);
+    await ensureLead(db, a.tenantId, body.leadId);
     const items = body.items ?? [];
     const [q] = await db
       .insert(quotes)
@@ -310,6 +377,7 @@ export async function crmRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = parse(quoteBody.partial(), req.body);
     await ensureCustomer(db, a.tenantId, body.customerId);
+    await ensureLead(db, a.tenantId, body.leadId);
     const [before] = await db.select().from(quotes).where(and(eq(quotes.tenantId, a.tenantId), eq(quotes.id, id)));
     if (!before) throw notFound('Angebot');
     const patch: Partial<typeof quotes.$inferInsert> = { ...body };

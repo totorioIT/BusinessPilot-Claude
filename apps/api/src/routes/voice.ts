@@ -283,40 +283,37 @@ export async function voiceRoutes(app: FastifyInstance) {
     const tenant = await tenantFromKey(app, req);
     const body = parse(z.object({ session_token: str, call_id: str, fromNumber: str, phone: str, name: str, plate: str }).passthrough(), req.body);
     const session = await voiceSession(app, tenant.id, body.session_token, { callId: body.call_id, fromNumber: body.fromNumber });
-    let rows: (typeof customers.$inferSelect)[] = [];
-    // A name or plate is only what the caller says; only the calling number is checked by the
-    // network. Callers matched by what they say learn nothing they didn't already know.
-    let matchedBy: 'plate' | 'phone' | 'name' = 'plate';
-    let plate: string | null = null;
-    if (body.plate) {
-      plate = body.plate.replace(/[\s-]/g, '').toUpperCase();
-      const hits = await db
-        .select({ customer: customers })
+    // Only the calling number is checked by the network; a name, plate or number the caller says is
+    // not proof of who they are. So only customers with the calling number can be found, and every
+    // other case gets the same answer: a caller learns nothing about anyone else.
+    const from = session.fromNumber ? phoneKey(session.fromNumber) : null;
+    let mine: (typeof customers.$inferSelect)[] = from
+      ? await db
+          .select()
+          .from(customers)
+          .where(and(eq(customers.tenantId, tenant.id), sql`right(regexp_replace(coalesce(${customers.phone}, ''), '\\D', '', 'g'), 9) = ${from}`))
+      : [];
+    if (mine.length > 1 && body.plate) {
+      // Several customers share the number (e.g. a family): the plate or name picks one of them.
+      const plate = body.plate.replace(/[\s-]/g, '').toUpperCase();
+      const owners = await db
+        .select({ id: customerAssets.customerId })
         .from(customerAssets)
-        .innerJoin(customers, eq(customers.id, customerAssets.customerId))
         .where(and(eq(customerAssets.tenantId, tenant.id), sql`upper(regexp_replace(coalesce(${customerAssets.identifier}, ''), '[\\s-]', '', 'g')) = ${plate}`));
-      rows = hits.map((h) => h.customer);
+      mine = mine.filter((c) => owners.some((o) => o.id === c.id));
     }
-    const phone = body.phone ?? session.fromNumber;
-    if (rows.length === 0 && phone) {
-      matchedBy = 'phone';
-      rows = await db
-        .select()
-        .from(customers)
-        .where(and(eq(customers.tenantId, tenant.id), sql`right(regexp_replace(coalesce(${customers.phone}, ''), '\\D', '', 'g'), 9) = ${phoneKey(phone)}`));
+    if (mine.length > 1 && body.name) mine = mine.filter((c) => c.name.toLowerCase() === body.name!.toLowerCase());
+    if (mine.length !== 1) {
+      return {
+        ok: true,
+        result: 'not_verified',
+        verified: false,
+        vehicles: [],
+        spoken_summary: 'Ihre Kundendaten kann ich am Telefon nur zuordnen, wenn Sie von Ihrer hinterlegten Nummer anrufen. Ihr Anliegen nehme ich aber gern auf.',
+      };
     }
-    if (rows.length === 0 && body.name) {
-      matchedBy = 'name';
-      rows = await db.select().from(customers).where(and(eq(customers.tenantId, tenant.id), sql`lower(${customers.name}) = lower(${body.name})`));
-    }
-    if (rows.length !== 1) {
-      return { ok: true, result: rows.length === 0 ? 'not_found' : 'ambiguous', spoken_summary: 'Ich konnte Sie leider nicht eindeutig zuordnen. Wie ist Ihr vollständiger Name?' };
-    }
-    const c = rows[0];
-    const verified = Boolean(session.fromNumber && c.phone && phoneKey(session.fromNumber) === phoneKey(c.phone));
-    const assets = (await db.select().from(customerAssets).where(eq(customerAssets.customerId, c.id))).filter((x) =>
-      verified ? true : matchedBy === 'plate' && (x.identifier ?? '').replace(/[\s-]/g, '').toUpperCase() === plate,
-    );
+    const c = mine[0];
+    const assets = await db.select().from(customerAssets).where(eq(customerAssets.customerId, c.id));
     await db.update(voiceSessions).set({ customerId: c.id }).where(eq(voiceSessions.id, session.id));
     if (session.conversationId) await db.update(conversations).set({ customerId: c.id, contactName: c.name }).where(eq(conversations.id, session.conversationId));
     return {
@@ -324,8 +321,7 @@ export async function voiceRoutes(app: FastifyInstance) {
       result: 'found',
       customer_id: c.id,
       customer_name: c.name,
-      /** False when the caller's number doesn't belong to this customer: share no further details. */
-      verified,
+      verified: true,
       vehicles: assets.map((x) => ({ vehicle_id: x.id, label: x.label, plate: x.identifier })),
       spoken_summary: `Ich habe Sie gefunden, ${c.name}.`,
     };
@@ -427,7 +423,9 @@ export async function voiceRoutes(app: FastifyInstance) {
       slotId = match.slotId;
     }
 
-    let customerId = body.customer_id ?? session.customerId;
+    // Only a customer this call was verified as (by the calling number) may be booked for; an id the
+    // caller or the AI supplies is not proof of identity.
+    let customerId = session.customerId;
     if (customerId) {
       const [c] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.tenantId, tenant.id), eq(customers.id, customerId)));
       if (!c) customerId = null;
@@ -444,13 +442,21 @@ export async function voiceRoutes(app: FastifyInstance) {
       if (session.conversationId) await db.update(conversations).set({ customerId, contactName: c.name }).where(eq(conversations.id, session.conversationId));
     }
 
+    let assetId: string | null = null;
+    if (body.vehicle_id) {
+      const [a] = await db
+        .select({ id: customerAssets.id })
+        .from(customerAssets)
+        .where(and(eq(customerAssets.tenantId, tenant.id), eq(customerAssets.customerId, customerId), eq(customerAssets.id, body.vehicle_id)));
+      assetId = a?.id ?? null;
+    }
     const providers = await providersFor(db, tenant.id);
     try {
       const result = await bookSlot(db, {
         tenantId: tenant.id,
         slotId,
         customerId,
-        assetId: body.vehicle_id,
+        assetId,
         channel: 'Telefon',
         idempotencyKey: body.idempotency_key ?? sha256(`${session.id}:${slotId}`),
         calendar: providers.calendar,

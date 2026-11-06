@@ -158,4 +158,5 @@ test('every response carries the browser security headers', async () => {
   assert.equal(res.headers['x-frame-options'], 'DENY');
   assert.equal(res.headers['x-content-type-options'], 'nosniff');
   assert.match(String(res.headers['content-security-policy']), /frame-ancestors 'none'/);
+  assert.match(String(res.headers['content-security-policy']), /script-src 'self'/);
 });

@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { api, type Asset, type Customer, type CustomerDetail } from '../api';
+import { useAuth } from '../auth';
 import { ChannelIcon, StatusBadge } from '../components/Conversation';
 import { ConsentSection } from '../components/ConsentSection';
 import { CustomerForm, type CustomerInput } from '../components/CustomerForm';
@@ -113,6 +114,10 @@ export function CustomerDetailPage() {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [assetOpen, setAssetOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { me } = useAuth();
+  const navigate = useNavigate();
+  const canDelete = me?.role === 'owner' || me?.role === 'admin';
   const q = useQuery({
     queryKey: ['customer', id],
     queryFn: () => api.get<CustomerDetail>(`/customers/${id}`),
@@ -125,6 +130,14 @@ export function CustomerDetailPage() {
       qc.invalidateQueries({ queryKey: ['customers'] });
       qc.invalidateQueries({ queryKey: ['consents', id] }); // a new email address resets email consent
       setEditOpen(false);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => api.del(`/customers/${id}`),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ['customer', id] });
+      qc.invalidateQueries();
+      navigate('/customers', { replace: true });
     },
   });
 
@@ -317,6 +330,37 @@ export function CustomerDetailPage() {
       {conversations.length === 0 && leads.length === 0 && appointments.length === 0 && quotes.length === 0 && assets.length === 0 && (
         <EmptyState title="Noch keine Vorgänge" text="Sobald Anrufe, Chats oder Termine zu diesem Kunden eingehen, erscheinen sie hier." />
       )}
+
+      {canDelete && (
+        <div className="form-actions form-actions--start">
+          <button type="button" className="btn btn--ghost-danger btn--sm" onClick={() => { remove.reset(); setDeleteOpen(true); }}>
+            <Trash2 aria-hidden="true" /> Kunde löschen
+          </button>
+        </div>
+      )}
+
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Kunde endgültig löschen?">
+        <div className="stack">
+          <p>
+            <strong>{c.name}</strong> wird mit allen zugehörigen Daten gelöscht: Fahrzeuge/Anlagen, Einwilligungen, Gespräche
+            mit Nachrichten und Anrufen, Termine, Anfragen, Angebote, Bewertungsanfragen und Aufgaben. Das lässt sich nicht
+            rückgängig machen.
+          </p>
+          <p className="muted small">
+            Nutzen Sie das, wenn ein Kunde die Löschung seiner Daten verlangt (Art. 17 DSGVO). Offene Termine müssen vorher
+            abgesagt werden. In den nächtlichen Backups bleiben die Daten noch bis zu 14 Tage erhalten.
+          </p>
+          <FormError error={remove.error} />
+          <div className="form-actions">
+            <button type="button" className="btn btn--outline btn--sm" onClick={() => setDeleteOpen(false)}>
+              Abbrechen
+            </button>
+            <button type="button" className="btn btn--ghost-danger btn--sm" disabled={remove.isPending} onClick={() => remove.mutate()}>
+              {remove.isPending && <Spinner />} Endgültig löschen
+            </button>
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} title="Kunde bearbeiten">
         <CustomerForm

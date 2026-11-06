@@ -16,9 +16,26 @@ ensure_log_retention() {
   fi
 }
 
+# Daily database backup at 03:30 via deploy/backup.sh (kept 14 days). Idempotent like above.
+ensure_backup_timer() {
+  local svc=/etc/systemd/system/businesspilot-backup.service
+  local tmr=/etc/systemd/system/businesspilot-backup.timer
+  local want_svc=$'[Unit]\nDescription=Rufanna Datenbank-Backup\n\n[Service]\nType=oneshot\nExecStart=/opt/businesspilot/deploy/backup.sh\n'
+  local want_tmr=$'[Unit]\nDescription=Rufanna Datenbank-Backup taeglich\n\n[Timer]\nOnCalendar=*-*-* 03:30:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n'
+  if [ "$(cat "$svc" 2>/dev/null)"$'\n' != "$want_svc" ] || [ "$(cat "$tmr" 2>/dev/null)"$'\n' != "$want_tmr" ]; then
+    printf '%s' "$want_svc" > "$svc"
+    printf '%s' "$want_tmr" > "$tmr"
+    systemctl daemon-reload
+    systemctl enable --now businesspilot-backup.timer
+  fi
+}
+
 main() {
   ensure_log_retention
+  ensure_backup_timer
   cd /opt/businesspilot
+  # .env holds the database password and APP_SECRET: only root may read it.
+  chmod 600 .env
   exec 9>/run/businesspilot-update.lock
   flock -n 9 || exit 0
 
