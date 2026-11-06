@@ -8,7 +8,7 @@
 
   --green-500: #19c37d;
   --green-600: #12a86a;
-  --green-700: #0d8a56;
+  --green-700: #0b7a4c; /* 2026-11-06: dunkler für Kontrast ≥ 4,5:1 (WCAG AA) */
   --green-100: #d6f5e6;
   --green-50: #ecfaf3;
 

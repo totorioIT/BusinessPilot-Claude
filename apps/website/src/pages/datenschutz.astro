@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+import { PRIVACY_HTML } from '../data/datenschutz';
+---
+<Base title="Datenschutzerklärung – BusinessPilot" description="Datenschutzerklärung: welche Daten wir verarbeiten, wozu und an wen sie gehen.">
+  <section class="section">
+    <div class="container legal">
+      <h1 class="h2">Datenschutz&shy;erklärung</h1>
+      <Fragment set:html={PRIVACY_HTML} />
+    </div>
+  </section>
+</Base>
+<style>
+  .legal { max-width: 760px; }
+  .legal h1 { margin-bottom: 28px; }
+  .legal :global(h2) { font-size: 1.5rem; margin: 40px 0 12px; }
+  .legal :global(h3) { font-size: 1.1875rem; margin: 28px 0 8px; }
+  .legal :global(h4) { font-size: 1rem; margin: 18px 0 6px; }
+  .legal :global(p + p) { margin-top: 10px; }
+  .legal :global(ul) { margin: 10px 0 10px 20px; display: grid; gap: 6px; }
+  .legal :global(a) { color: var(--navy-900); text-decoration: underline; overflow-wrap: anywhere; }
+</style>

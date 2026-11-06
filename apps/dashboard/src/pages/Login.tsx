@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Logo } from '../components/Logo';
 import { FormError, Spinner } from '../components/ui';
@@ -66,6 +66,10 @@ export function LoginPage() {
           {busy && <Spinner />} Anmelden
         </button>
       </form>
+      <nav className="login__legal" aria-label="Rechtliches">
+        <Link to="/impressum">Impressum</Link>
+        <Link to="/datenschutz">Datenschutz</Link>
+      </nav>
     </div>
   );
 }
