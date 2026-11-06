@@ -1,7 +1,12 @@
 # One server (Germany): Postgres, the app (API + dashboard) and Caddy for HTTPS.
 # deploy/install.sh writes the .env next to this file.
+# All containers log to journald, which keeps entries for 14 days (deploy/update.sh).
+x-logging: &logging
+  driver: journald
+
 services:
   db:
+    logging: *logging
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -16,6 +21,7 @@ services:
       retries: 10
 
   app:
+    logging: *logging
     build:
       context: .
       args:
@@ -38,6 +44,7 @@ services:
 
   caddy:
     image: caddy:2-alpine
+    logging: *logging
     restart: unless-stopped
     depends_on:
       - app

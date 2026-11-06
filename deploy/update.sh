@@ -3,7 +3,21 @@
 # Run by businesspilot-update.timer; FORCE=1 rebuilds even without new commits.
 set -euo pipefail
 
+# Server logs (app requests incl. IP addresses, Caddy, Postgres) go to journald via
+# docker-compose.yml; journald deletes entries older than 14 days (Datenschutzerklärung,
+# "Server-Log-Dateien"). Idempotent: only writes and restarts journald when the file differs.
+ensure_log_retention() {
+  local conf=/etc/systemd/journald.conf.d/businesspilot-retention.conf
+  local want=$'[Journal]\nMaxRetentionSec=14day\nMaxFileSec=1day\n'
+  if [ "$(cat "$conf" 2>/dev/null)"$'\n' != "$want" ]; then
+    mkdir -p "$(dirname "$conf")"
+    printf '%s' "$want" > "$conf"
+    systemctl restart systemd-journald
+  fi
+}
+
 main() {
+  ensure_log_retention
   cd /opt/businesspilot
   exec 9>/run/businesspilot-update.lock
   flock -n 9 || exit 0
