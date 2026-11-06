@@ -330,6 +330,10 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
 .legal h2 { font-size: 1.0625rem; margin-top: 18px; }
 .legal a { text-decoration: underline; }
 .legal__back { margin-top: 18px; }
+.legal h3 { font-size: 0.9375rem; margin-top: 12px; }
+.legal h4 { font-size: 0.875rem; margin-top: 8px; }
+.legal ul { padding-left: 20px; display: grid; gap: 6px; }
+.legal a { overflow-wrap: anywhere; }
 
 /* ---------- Dashboard ---------- */
 .hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 24px; border-radius: var(--radius-lg); background: linear-gradient(120deg, var(--navy-900), var(--navy-700)); color: var(--white); box-shadow: var(--shadow); }

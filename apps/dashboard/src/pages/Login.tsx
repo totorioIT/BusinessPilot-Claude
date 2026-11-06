@@ -68,6 +68,7 @@ export function LoginPage() {
       </form>
       <nav className="login__legal" aria-label="Rechtliches">
         <Link to="/impressum">Impressum</Link>
+        <Link to="/datenschutz">Datenschutz</Link>
       </nav>
     </div>
   );

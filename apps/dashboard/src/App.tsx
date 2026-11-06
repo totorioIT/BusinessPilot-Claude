@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { ErrorState, FullPageLoader } from './components/ui';
 import { LoginPage } from './pages/Login';
 import { ImpressumPage } from './pages/Impressum';
+import { DatenschutzPage } from './pages/Datenschutz';
 import { DashboardPage } from './pages/Dashboard';
 import { InboxPage } from './pages/Inbox';
 import { PhonePage } from './pages/Phone';
@@ -52,6 +53,7 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
       <Route element={<Protected />}>
         <Route index element={<DashboardPage />} />
         <Route path="inbox" element={<InboxPage />} />

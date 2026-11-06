@@ -38,7 +38,7 @@ Branchenseiten stehen bewusst **nicht** in der Hauptnavigation. Sie sind über d
    Empfehlung: Querformat 1600 × 1280 px, JPG oder WebP, unter 300 KB.
 2. **Domain und E-Mail** in `src/data/site.ts` und `public/robots.txt` eintragen.
 3. **Formular-Backend**: `FORM_ENDPOINT` in `src/data/site.ts` setzen (z. B. Formspree oder eigenes Backend, nimmt JSON per POST an). Ohne Endpunkt öffnet das Formular das E-Mail-Programm mit vorbereiteter Nachricht.
-4. **Impressum** steht unter `/impressum` (Angaben in `src/data/legal.ts`). **Datenschutzerklärung** noch ergänzen und im Footer verlinken.
+4. **Impressum** steht unter `/impressum` (Angaben in `src/data/legal.ts`). **Datenschutzerklärung** unter `/datenschutz` (Text in `src/data/datenschutz.ts`).
 
 ## Wichtige Inhaltsregeln
 
