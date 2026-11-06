@@ -33,12 +33,12 @@ Branchenseiten stehen bewusst **nicht** in der Hauptnavigation. Sie sind über d
 
 ## Vor dem Livegang
 
-1. **Branchenfotos** liegen als Pexels-Fotos (800 px) bereit. Für schärfere Darstellung auf Retina-Displays später durch größere Versionen (ab 1600 px Breite) ersetzen:
+1. **Branchenfotos** liegen als Pexels-Fotos (800 px) bereit. Herkunft und Lizenz in `BILDQUELLEN.md` nachweisen. Für schärfere Darstellung auf Retina-Displays später durch größere Versionen (ab 1600 px Breite) ersetzen:
    `public/images/branchen/werkstatt.jpg`, `beauty-kosmetik.jpg`, `fitnessstudio.jpg`, `handwerk.jpg`, `handel.jpg`, `friseur.jpg`, `restaurant.jpg`
    Empfehlung: Querformat 1600 × 1280 px, JPG oder WebP, unter 300 KB.
 2. **Domain und E-Mail** in `src/data/site.ts` und `public/robots.txt` eintragen.
 3. **Formular-Backend**: `FORM_ENDPOINT` in `src/data/site.ts` setzen (z. B. Formspree oder eigenes Backend, nimmt JSON per POST an). Ohne Endpunkt öffnet das Formular das E-Mail-Programm mit vorbereiteter Nachricht.
-4. **Impressum und Datenschutzerklärung** ergänzen und im Footer verlinken (in Deutschland Pflicht).
+4. **Impressum** steht unter `/impressum` (Angaben in `src/data/legal.ts`). **Datenschutzerklärung** noch ergänzen und im Footer verlinken.
 
 ## Wichtige Inhaltsregeln
 

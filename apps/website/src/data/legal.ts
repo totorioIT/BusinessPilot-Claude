@@ -1,0 +1,12 @@
+// Pflichtangaben für Impressum (§ 5 DDG). Angaben von Philipp, 2026-11-06.
+// Gleiche Angaben stehen in apps/dashboard/src/legal.ts; bei Änderungen beide anpassen.
+export const IMPRINT = {
+  name: 'Philipp Wiedamann',
+  street: 'Milchstr. 13',
+  city: '85049 Ingolstadt',
+  phone: '0171-2617554',
+  email: 'ph.wiedamann@gmail.com',
+  // TODO: E-Mail der DSA-Kontaktstelle von Philipp bestätigen lassen.
+  dsaEmail: '[PLATZHALTER: E-Mail-Adresse der Kontaktstelle]',
+  dsaLanguages: 'Deutsch, Englisch',
+};

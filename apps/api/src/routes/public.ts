@@ -19,10 +19,11 @@ function page(reply: FastifyReply, status: number, title: string, body: string) 
     .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
     .send(`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>${escapeHtml(title)}</title>
-<style>body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f4f6fa;color:#0b1b33;display:grid;place-items:center;min-height:100vh;padding:16px}
+<style>body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f4f6fa;color:#0b1b33;display:grid;place-items:center;align-content:center;min-height:100vh;padding:16px}
 main{background:#fff;border-radius:16px;padding:32px;max-width:440px;width:100%;box-shadow:0 8px 30px rgba(11,27,51,.08)}h1{font-size:1.4rem;margin:0 0 12px}p{line-height:1.5;color:#3d4b63}
+footer{margin-top:16px;font-size:.875rem}footer a{color:#3d4b63}
 button{margin-top:12px;background:#19c37d;color:#0b1b33;border:0;border-radius:10px;padding:12px 20px;font-weight:700;font-size:1rem;cursor:pointer}</style></head>
-<body><main>${body}</main></body></html>`);
+<body><main>${body}</main><footer><a href="/impressum">Impressum</a></footer></body></html>`);
 }
 
 const invalid = (reply: FastifyReply) =>

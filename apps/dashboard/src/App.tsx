@@ -3,6 +3,7 @@ import { useAuth } from './auth';
 import { Layout } from './components/Layout';
 import { ErrorState, FullPageLoader } from './components/ui';
 import { LoginPage } from './pages/Login';
+import { ImpressumPage } from './pages/Impressum';
 import { DashboardPage } from './pages/Dashboard';
 import { InboxPage } from './pages/Inbox';
 import { PhonePage } from './pages/Phone';
@@ -50,6 +51,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/impressum" element={<ImpressumPage />} />
       <Route element={<Protected />}>
         <Route index element={<DashboardPage />} />
         <Route path="inbox" element={<InboxPage />} />
