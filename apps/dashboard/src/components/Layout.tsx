@@ -208,8 +208,7 @@ export function Layout() {
       </a>
       <aside className="sidebar" id="sidebar" aria-label="Hauptnavigation">
         <div className="sidebar__brand">
-          <Logo />
-          <p className="sidebar__tagline">Dein digitaler Mitarbeiter</p>
+          <Logo height={64} />
           <button
             type="button"
             className="icon-btn icon-btn--dark sidebar__close"

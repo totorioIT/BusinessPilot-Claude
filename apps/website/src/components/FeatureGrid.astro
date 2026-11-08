@@ -20,7 +20,7 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Funktionen</span>
-      <h2 id={`${id}-title`} class="h2">Was kann BusinessPilot eigentlich alles?</h2>
+      <h2 id={`${id}-title`} class="h2">Was kann Rufanna eigentlich alles?</h2>
       <p class="lead">{lead}</p>
     </div>
     <ul class="feature-grid" role="list">
@@ -45,7 +45,7 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
               <span class="integration-label"><Icon name="plug" /> {ex.integration}</span>
             )}
             <button class="feature-card__toggle" type="button" aria-expanded="false" aria-controls={panelId} data-accordion>
-              So reagiert BusinessPilot <Icon name="arrowRight" size={16} />
+              So reagiert Rufanna <Icon name="arrowRight" size={16} />
             </button>
             <div id={panelId} class="feature-card__workflow" hidden>
               <ol>

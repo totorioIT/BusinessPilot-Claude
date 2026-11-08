@@ -127,7 +127,7 @@ function Dialog360KeyForm() {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
         />
-        <p className="field__hint">Wird verschlüsselt gespeichert. BusinessPilot trägt seine Empfangsadresse selbst bei 360dialog ein.</p>
+        <p className="field__hint">Wird verschlüsselt gespeichert. Rufanna trägt seine Empfangsadresse selbst bei 360dialog ein.</p>
       </div>
       <label className="small">
         <input type="checkbox" checked={testAccount} onChange={(e) => setTestAccount(e.target.checked)} /> Testzugang (360dialog Sandbox)
@@ -245,7 +245,7 @@ function StaffCalendars() {
   );
 }
 
-/** Which Google location's reviews BusinessPilot shows; only asked when the account manages several. */
+/** Which Google location's reviews Rufanna shows; only asked when the account manages several. */
 function BusinessLocationPicker() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['google-locations'], queryFn: () => api.get<BusinessLocations>('/integrations/google_business/locations') });
@@ -339,7 +339,7 @@ function FonioLog() {
           {q.isFetching ? <Spinner /> : <RefreshCw aria-hidden="true" />} Aktualisieren
         </button>
       </header>
-      <p className="muted small">Zeigt, was fonio und 360dialog an BusinessPilot geschickt haben. Nach einem Neustart des Servers ist die Liste leer.</p>
+      <p className="muted small">Zeigt, was fonio und 360dialog an Rufanna geschickt haben. Nach einem Neustart des Servers ist die Liste leer.</p>
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && rows.length === 0 && <p className="small">Noch keine Aufrufe seit dem letzten Neustart.</p>}
       {rows.length > 0 && (

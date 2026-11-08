@@ -1,18 +1,12 @@
 ---
-interface Props { dark?: boolean }
-const { dark = true } = Astro.props;
+// Rufanna-Logo. dark = auf dunklem Hintergrund (Standard), dann ist „Ruf“ weiß statt dunkelblau.
+interface Props { dark?: boolean; height?: number }
+const { dark = true, height = 58 } = Astro.props;
+const src = dark ? '/brand/rufanna-logo-hell.webp' : '/brand/rufanna-logo.webp';
+// Bilddatei: 640 × 221 px
+const width = Math.round((height * 640) / 221);
 ---
-<span class:list={['logo', { 'logo--light': !dark }]}>
-  <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
-    <rect width="32" height="32" rx="8" fill="#19c37d" />
-    <path d="M10 8h7.5a5 5 0 0 1 2 9.6A5.2 5.2 0 0 1 17.8 26H10z" fill="#0b1b33" />
-    <path d="M14 12v3.5h3.5a1.75 1.75 0 0 0 0-3.5zm0 7v3.5h4a1.75 1.75 0 0 0 0-3.5z" fill="#19c37d" />
-  </svg>
-  <span class="logo__text">Business<span>Pilot</span></span>
-</span>
+<img class="logo" src={src} width={width} height={height} alt="Rufanna – Deine digitale Mitarbeiterin" decoding="async" />
 <style>
-  .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1875rem; letter-spacing: -0.02em; color: var(--white); }
-  .logo__text span { color: var(--green-500); }
-  .logo--light { color: var(--navy-900); }
-  .logo--light .logo__text span { color: var(--green-600); }
+  .logo { display: block; height: auto; max-width: 100%; }
 </style>

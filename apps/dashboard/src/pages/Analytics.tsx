@@ -21,7 +21,7 @@ export function AnalyticsPage() {
     <div className="stack-lg">
       <PageHeader
         title="Analyse & ROI"
-        subtitle="Der geschäftliche Mehrwert Ihres digitalen Mitarbeiters."
+        subtitle="Der geschäftliche Mehrwert Ihrer digitalen Mitarbeiterin."
         actions={
           <div className="segmented" role="group" aria-label="Zeitraum">
             {ranges.map((r) => (

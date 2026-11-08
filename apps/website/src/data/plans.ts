@@ -26,7 +26,7 @@ export const plans: Plan[] = [
   {
     id: 'BUSINESS',
     name: 'BUSINESS',
-    positioning: 'Dein digitaler Mitarbeiter.',
+    positioning: 'Deine digitale Mitarbeiterin.',
     priceMonthly: '499 €',
     onboarding: '990 € einmaliges Onboarding',
     includesPrevious: 'START',

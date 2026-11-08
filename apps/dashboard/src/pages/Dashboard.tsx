@@ -31,14 +31,14 @@ export function DashboardPage() {
     queryKey: ['dashboard', DAYS],
     queryFn: () => api.get<DashboardData>('/dashboard', { days: DAYS }),
   });
-  const ai = me.ai.name || 'Ihr digitaler Mitarbeiter';
+  const ai = me.ai.name || 'Ihre digitale Mitarbeiterin';
 
   return (
     <div className="stack-lg">
       <header className="page-header">
         <div className="page-header__text">
           <h1>Guten Tag, {firstName(me.user.name)}</h1>
-          <p className="muted">Was hat Ihr digitaler Mitarbeiter in den letzten {DAYS} Tagen für Sie erledigt?</p>
+          <p className="muted">Was hat Ihre digitale Mitarbeiterin in den letzten {DAYS} Tagen für Sie erledigt?</p>
         </div>
       </header>
 

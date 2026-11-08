@@ -39,7 +39,7 @@ export async function systemMailer(db: DbOrTx, userId: string): Promise<EmailPro
   if (row) {
     const v = row.value as Stored;
     try {
-      return brevoEmail({ apiKey: decrypt(v.apiKey), senderEmail: v.senderEmail, senderName: 'BusinessPilot' });
+      return brevoEmail({ apiKey: decrypt(v.apiKey), senderEmail: v.senderEmail, senderName: 'Rufanna' });
     } catch (err) {
       console.error('System-E-Mail: Schlüssel kann nicht entschlüsselt werden (APP_SECRET geändert?)', err);
     }

@@ -32,7 +32,7 @@ export function brevoEmail(cfg: BrevoConfig): EmailProvider {
           headers: { 'api-key': cfg.apiKey, 'content-type': 'application/json', accept: 'application/json' },
           body: JSON.stringify({
             // The business's name as display name; the verified platform address as sender.
-            sender: { email: cfg.senderEmail, name: (input.fromName ?? cfg.senderName ?? 'BusinessPilot').slice(0, 70) },
+            sender: { email: cfg.senderEmail, name: (input.fromName ?? cfg.senderName ?? 'Rufanna').slice(0, 70) },
             to: [{ email: input.to }],
             subject: input.subject,
             textContent: input.text,

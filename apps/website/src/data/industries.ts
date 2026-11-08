@@ -15,9 +15,9 @@ export const INTEGRATION = {
 
 export interface CustomerRequest {
   text: string;
-  /** Was BusinessPilot versteht */
+  /** Was Rufanna versteht */
   intent: string;
-  /** Was BusinessPilot tut */
+  /** Was Rufanna tut */
   steps: string[];
   /** Geschäftliches Ergebnis */
   outcome: string;
@@ -87,7 +87,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist mein digitaler Serviceberater.',
     heroTitle: 'Der digitale Serviceberater für Ihre Werkstatt.',
     heroSubtitle:
-      'BusinessPilot nimmt Anrufe und WhatsApp-Nachrichten an, erfasst Fahrzeug und Anliegen, bietet Termine an und fasst offene Angebote nach. Ihr Team bleibt in der Halle.',
+      'Rufanna nimmt Anrufe und WhatsApp-Nachrichten an, erfasst Fahrzeug und Anliegen, bietet Termine an und fasst offene Angebote nach. Ihr Team bleibt in der Halle.',
     cardTeaser: 'Termine, Statusanfragen und Serviceanfragen automatisch annehmen.',
     image: { src: '/images/branchen/werkstatt.jpg', alt: 'Zwei Mechaniker arbeiten in einer Kfz-Werkstatt' },
     overlay: {
@@ -96,7 +96,7 @@ export const industries: Industry[] = [
       text: 'Ich brauche neue Bremsen.',
       checks: ['Kunde erkannt', 'Fahrzeug erfasst', 'Service erkannt', 'Termin angeboten'],
     },
-    keyStatement: 'Während Ihr Team schraubt, nimmt BusinessPilot das Telefon an.',
+    keyStatement: 'Während Ihr Team schraubt, nimmt Rufanna das Telefon an.',
     customerRequests: [
       {
         text: 'Ich brauche neue Bremsen.',
@@ -133,7 +133,7 @@ export const industries: Industry[] = [
           'Termin anbieten',
         ],
         outcome: 'Aus einer Preisfrage wird eine Buchungsmöglichkeit',
-        note: 'BusinessPilot nennt nur Preise, die Sie selbst hinterlegt und freigegeben haben.',
+        note: 'Rufanna nennt nur Preise, die Sie selbst hinterlegt und freigegeben haben.',
       },
       {
         text: 'Ich brauche einen Termin.',
@@ -169,7 +169,7 @@ export const industries: Industry[] = [
           'Rückruf- oder Notfallprozess starten',
         ],
         outcome: 'Dringende Anfrage richtig weitergeleitet',
-        note: 'BusinessPilot leitet weiter und strukturiert. Eine Pannenhilfe leistet BusinessPilot nicht selbst.',
+        note: 'Rufanna leitet weiter und strukturiert. Eine Pannenhilfe leistet Rufanna nicht selbst.',
       },
     ],
     quickExamples: [
@@ -208,7 +208,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Fahrzeug abgeholt', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Sommerreifen im April montiert', steps: ['Im Oktober an Winterreifen erinnern', 'Freien Termin vorschlagen', 'Kunde bucht per WhatsApp'] },
       aktionen: { text: 'Neue Alufelgen eingetroffen', steps: ['Kunden mit Einwilligung und passender Reifengröße', 'Nachricht mit Bild und Preis', 'Beratungstermin reserviert'] },
-      'ki-mitarbeiter': { text: 'Terminanfrage oder Reklamation?', steps: ['Terminanfrage: BusinessPilot übernimmt', 'Reklamation: Übergabe an Meister'] },
+      'ki-mitarbeiter': { text: 'Terminanfrage oder Reklamation?', steps: ['Terminanfrage: Rufanna übernimmt', 'Reklamation: Übergabe an Meister'] },
       reporting: { text: 'Ihre Werkstattwoche', steps: ['37 Telefonate', '8 Werkstatttermine', '2 Angebote nachgefasst', '4 h 18 min geschätzte Zeitersparnis'], sample: true },
     },
     economicExample: {
@@ -242,12 +242,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 15, missed: 15, orderValue: 650, conversion: 35, days: 5 },
     cta: {
       title: 'Bereit für Ihren digitalen Serviceberater?',
-      text: 'Wir zeigen Ihnen in einer kurzen Demo, wie BusinessPilot Anfragen in Ihrer Werkstatt annimmt und in Aufträge verwandelt.',
+      text: 'Wir zeigen Ihnen in einer kurzen Demo, wie Rufanna Anfragen in Ihrer Werkstatt annimmt und in Aufträge verwandelt.',
     },
     seo: {
-      title: 'BusinessPilot für Werkstätten – Der digitale Serviceberater',
+      title: 'Rufanna für Werkstätten – Der digitale Serviceberater',
       description:
-        'BusinessPilot nimmt Anrufe und WhatsApp-Anfragen Ihrer Werkstatt an, erfasst Fahrzeugdaten, bucht Termine und fasst Angebote nach. Weniger verpasste Aufträge.',
+        'Rufanna nimmt Anrufe und WhatsApp-Anfragen Ihrer Werkstatt an, erfasst Fahrzeugdaten, bucht Termine und fasst Angebote nach. Weniger verpasste Aufträge.',
     },
   },
 
@@ -261,7 +261,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist meine digitale Rezeption.',
     heroTitle: 'Ihre digitale Rezeption für Beauty & Kosmetik.',
     heroSubtitle:
-      'BusinessPilot beantwortet Fragen zu Behandlungen, bucht und verschiebt Termine und holt Stammkundinnen zurück, während Sie behandeln.',
+      'Rufanna beantwortet Fragen zu Behandlungen, bucht und verschiebt Termine und holt Stammkundinnen zurück, während Sie behandeln.',
     cardTeaser: 'Behandlungsfragen beantworten, Termine buchen, Kundinnen zurückholen.',
     image: { src: '/images/branchen/beauty-kosmetik.jpg', alt: 'Kosmetikerin in ihrem hellen Behandlungsraum' },
     overlay: {
@@ -270,14 +270,14 @@ export const industries: Industry[] = [
       text: 'Habt ihr Donnerstag noch einen Termin?',
       checks: ['Kundin erkannt', 'Behandlung erkannt', 'Freie Zeiten geprüft', 'Termin angeboten'],
     },
-    keyStatement: 'Während Sie behandeln, kümmert sich BusinessPilot um Ihre Anfragen.',
+    keyStatement: 'Während Sie behandeln, kümmert sich Rufanna um Ihre Anfragen.',
     customerRequests: [
       {
         text: 'Was kostet Microneedling?',
         intent: 'Preis- und Behandlungsfrage',
         steps: ['Behandlung erkennen', 'Hinterlegte Preise und Dauer nennen', 'Häufige Fragen beantworten', 'Termin anbieten'],
         outcome: 'Aus einer Preisfrage wird eine Buchung',
-        note: 'BusinessPilot nennt nur Preise, die Sie hinterlegt haben.',
+        note: 'Rufanna nennt nur Preise, die Sie hinterlegt haben.',
       },
       {
         text: 'Habt ihr Donnerstag noch einen Termin?',
@@ -338,7 +338,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Behandlung abgeschlossen', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Gesichtsbehandlung vor 4 Wochen', steps: ['Nächste Behandlung empfehlen', 'Lieblingszeit anbieten', 'Kundin bucht'] },
       aktionen: { text: 'Neue Pflegelinie eingetroffen', steps: ['Kundinnen mit Einwilligung auswählen', 'Info mit Probier-Angebot senden', 'Termin gebucht'] },
-      'ki-mitarbeiter': { text: 'Terminfrage oder Hautreaktion?', steps: ['Terminfrage: BusinessPilot übernimmt', 'Hautreaktion: Übergabe an Kosmetikerin'] },
+      'ki-mitarbeiter': { text: 'Terminfrage oder Hautreaktion?', steps: ['Terminfrage: Rufanna übernimmt', 'Hautreaktion: Übergabe an Kosmetikerin'] },
       reporting: { text: 'Ihre Studiowoche', steps: ['22 Anrufe', '31 WhatsApp-Anfragen', '19 Termine gebucht', '6 Kundinnen reaktiviert'], sample: true },
     },
     economicExample: {
@@ -372,12 +372,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 12, missed: 20, orderValue: 120, conversion: 55, days: 5 },
     cta: {
       title: 'Bereit für Ihre digitale Rezeption?',
-      text: 'In einer kurzen Demo zeigen wir Ihnen, wie BusinessPilot Termine bucht, Fragen beantwortet und Kundinnen zurückholt.',
+      text: 'In einer kurzen Demo zeigen wir Ihnen, wie Rufanna Termine bucht, Fragen beantwortet und Kundinnen zurückholt.',
     },
     seo: {
-      title: 'BusinessPilot für Kosmetikstudios – Ihre digitale Rezeption',
+      title: 'Rufanna für Kosmetikstudios – Ihre digitale Rezeption',
       description:
-        'BusinessPilot beantwortet Behandlungsfragen, bucht und verschiebt Termine und reaktiviert Stammkundinnen. Die digitale Rezeption für Beauty- und Kosmetikstudios.',
+        'Rufanna beantwortet Behandlungsfragen, bucht und verschiebt Termine und reaktiviert Stammkundinnen. Die digitale Rezeption für Beauty- und Kosmetikstudios.',
     },
   },
 
@@ -392,7 +392,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist mein digitaler Studioassistent.',
     heroTitle: 'Ihr digitaler Studioassistent.',
     heroSubtitle:
-      'BusinessPilot beantwortet Fragen zu Mitgliedschaften, bucht Probetrainings, fasst bei Interessenten nach und hilft, Mitglieder zu halten.',
+      'Rufanna beantwortet Fragen zu Mitgliedschaften, bucht Probetrainings, fasst bei Interessenten nach und hilft, Mitglieder zu halten.',
     cardTeaser: 'Probetrainings buchen, Interessenten nachfassen, Mitglieder halten.',
     image: { src: '/images/branchen/fitnessstudio.jpg', alt: 'Mitglied trainiert an einem Gerät im Fitnessstudio' },
     overlay: {
@@ -413,7 +413,7 @@ export const industries: Industry[] = [
         intent: 'Preisfrage',
         steps: ['Hinterlegte Tarife nennen', 'Passenden Tarif zum Ziel empfehlen', 'Probetraining anbieten'],
         outcome: 'Aus der Preisfrage wird ein Probetraining',
-        note: 'BusinessPilot nennt nur Tarife, die Sie hinterlegt haben.',
+        note: 'Rufanna nennt nur Tarife, die Sie hinterlegt haben.',
       },
       {
         text: 'Kann ich heute Abend noch zum Probetraining kommen?',
@@ -461,7 +461,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Erste 4 Wochen Mitgliedschaft', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: '10er-Karte Personal Training fast aufgebraucht', steps: ['Rechtzeitig Bescheid geben', 'Neues Paket anbieten', 'Nächste Einheit gebucht'] },
       aktionen: { text: 'Neuer Yoga-Kurs ab Montag', steps: ['Interessierte Mitglieder mit Einwilligung', 'Kursinfo senden', 'Platz reserviert'] },
-      'ki-mitarbeiter': { text: 'Tariffrage oder Kündigung?', steps: ['Tariffrage: BusinessPilot übernimmt', 'Kündigung: Übergabe an Studioleitung'] },
+      'ki-mitarbeiter': { text: 'Tariffrage oder Kündigung?', steps: ['Tariffrage: Rufanna übernimmt', 'Kündigung: Übergabe an Studioleitung'] },
       reporting: { text: 'Ihre Studiowoche', steps: ['18 Probetrainings gebucht', '11 Follow-ups', '6 neue Mitglieder', '9 Mitglieder reaktiviert'], sample: true },
     },
     economicExample: {
@@ -496,12 +496,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 10, missed: 25, orderValue: 588, conversion: 30, days: 6 },
     cta: {
       title: 'Bereit für Ihren digitalen Studioassistenten?',
-      text: 'Wir zeigen Ihnen, wie BusinessPilot Probetrainings bucht, nachfasst und Mitglieder aktiv hält.',
+      text: 'Wir zeigen Ihnen, wie Rufanna Probetrainings bucht, nachfasst und Mitglieder aktiv hält.',
     },
     seo: {
-      title: 'BusinessPilot für Fitnessstudios – Ihr digitaler Studioassistent',
+      title: 'Rufanna für Fitnessstudios – Ihr digitaler Studioassistent',
       description:
-        'BusinessPilot bucht Probetrainings, beantwortet Tariffragen, fasst bei Interessenten nach und hilft, inaktive Mitglieder zurückzugewinnen.',
+        'Rufanna bucht Probetrainings, beantwortet Tariffragen, fasst bei Interessenten nach und hilft, inaktive Mitglieder zurückzugewinnen.',
     },
   },
 
@@ -515,7 +515,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist mein digitales Büro.',
     heroTitle: 'Das digitale Büro für Ihren Handwerksbetrieb.',
     heroSubtitle:
-      'BusinessPilot nimmt Anrufe an, erkennt Notfälle, plant Wartungstermine und bereitet Angebotsanfragen vor. Sie bleiben auf der Baustelle.',
+      'Rufanna nimmt Anrufe an, erkennt Notfälle, plant Wartungstermine und bereitet Angebotsanfragen vor. Sie bleiben auf der Baustelle.',
     cardTeaser: 'Anrufe annehmen, Notfälle erkennen, Angebote vorbereiten.',
     image: { src: '/images/branchen/handwerk.jpg', alt: 'Handwerker bearbeitet Holz an einer Maschine in seiner Werkstatt' },
     overlay: {
@@ -524,7 +524,7 @@ export const industries: Industry[] = [
       text: 'Unsere Heizung ist ausgefallen.',
       checks: ['Notfall erkannt', 'Adresse erfasst', 'Anlage erfasst', 'Monteur benachrichtigt'],
     },
-    keyStatement: 'Während Sie arbeiten, kümmert sich BusinessPilot um das Telefon.',
+    keyStatement: 'Während Sie arbeiten, kümmert sich Rufanna um das Telefon.',
     customerRequests: [
       {
         text: 'Unsere Heizung ist ausgefallen.',
@@ -563,7 +563,7 @@ export const industries: Industry[] = [
         intent: 'Preisanfrage',
         steps: ['Anlagentyp erfragen', 'Hinterlegte Preisinformation nennen', 'Termin anbieten'],
         outcome: 'Aus der Preisfrage wird ein Wartungstermin',
-        note: 'BusinessPilot nennt nur Preise, die Sie hinterlegt haben.',
+        note: 'Rufanna nennt nur Preise, die Sie hinterlegt haben.',
       },
     ],
     quickExamples: [
@@ -598,7 +598,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Auftrag abgeschlossen', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Neue Heizung vor 11 Monaten eingebaut', steps: ['Erste Jahreswartung empfehlen', 'Termin vorschlagen', 'Wartung eingeplant'] },
       aktionen: { text: 'Neue Förderung für Wärmepumpen', steps: ['Kunden mit Einwilligung und älterer Heizung', 'Kurzinfo senden', 'Beratungstermin vereinbart'] },
-      'ki-mitarbeiter': { text: 'Wartungstermin oder Preisverhandlung?', steps: ['Wartungstermin: BusinessPilot übernimmt', 'Preisverhandlung: Übergabe an Chef'] },
+      'ki-mitarbeiter': { text: 'Wartungstermin oder Preisverhandlung?', steps: ['Wartungstermin: Rufanna übernimmt', 'Preisverhandlung: Übergabe an Chef'] },
       reporting: { text: 'Ihre Woche im Betrieb', steps: ['41 Telefonate', '3 Notfälle weitergeleitet', '4 Angebote vorbereitet', '5 h 10 min geschätzte Zeitersparnis'], sample: true },
     },
     economicExample: {
@@ -633,12 +633,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 12, missed: 25, orderValue: 300, conversion: 45, days: 5 },
     cta: {
       title: 'Bereit für Ihr digitales Büro?',
-      text: 'Wir zeigen Ihnen, wie BusinessPilot Ihr Telefon übernimmt, Notfälle erkennt und Angebotsanfragen vorbereitet.',
+      text: 'Wir zeigen Ihnen, wie Rufanna Ihr Telefon übernimmt, Notfälle erkennt und Angebotsanfragen vorbereitet.',
     },
     seo: {
-      title: 'BusinessPilot für Handwerksbetriebe – Das digitale Büro',
+      title: 'Rufanna für Handwerksbetriebe – Das digitale Büro',
       description:
-        'BusinessPilot nimmt Anrufe Ihres Handwerksbetriebs an, erkennt Notfälle, plant Wartungen und bereitet Angebotsanfragen vor. Während Sie arbeiten.',
+        'Rufanna nimmt Anrufe Ihres Handwerksbetriebs an, erkennt Notfälle, plant Wartungen und bereitet Angebotsanfragen vor. Während Sie arbeiten.',
     },
   },
 
@@ -652,7 +652,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist mein digitaler Kundenberater.',
     heroTitle: 'Ihr digitaler Kundenberater für den Handel.',
     heroSubtitle:
-      'BusinessPilot beantwortet Fragen zu Produkten, Verfügbarkeit und Öffnungszeiten, nimmt Reservierungen auf und informiert Kunden, sobald Ware wieder da ist.',
+      'Rufanna beantwortet Fragen zu Produkten, Verfügbarkeit und Öffnungszeiten, nimmt Reservierungen auf und informiert Kunden, sobald Ware wieder da ist.',
     cardTeaser: 'Produktfragen beantworten, reservieren, Kunden informieren.',
     image: { src: '/images/branchen/handel.jpg', alt: 'Beleuchtetes Modegeschäft mit offenem Eingang' },
     overlay: {
@@ -738,7 +738,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Kauf abgeschlossen', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Laufschuhe vor 8 Monaten gekauft', steps: ['Hinweis: Zeit für ein neues Paar', 'Laufanalyse anbieten', 'Kunde kommt vorbei'] },
       aktionen: { text: 'Neue Kollektion eingetroffen', steps: ['Kunden mit Einwilligung auswählen', 'Vorschau mit Gutschein senden', 'Kunde reserviert Lieblingsstück'] },
-      'ki-mitarbeiter': { text: 'Produktfrage oder Reklamation?', steps: ['Produktfrage: BusinessPilot übernimmt', 'Reklamation: Übergabe an Filialleitung'] },
+      'ki-mitarbeiter': { text: 'Produktfrage oder Reklamation?', steps: ['Produktfrage: Rufanna übernimmt', 'Reklamation: Übergabe an Filialleitung'] },
       reporting: { text: 'Ihre Woche im Geschäft', steps: ['28 Anrufe', '36 WhatsApp-Anfragen', '12 Reservierungen', '3 h 50 min geschätzte Zeitersparnis'], sample: true },
     },
     economicExample: {
@@ -772,12 +772,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 20, missed: 15, orderValue: 85, conversion: 40, days: 6 },
     cta: {
       title: 'Bereit für Ihren digitalen Kundenberater?',
-      text: 'Wir zeigen Ihnen, wie BusinessPilot Kundenfragen beantwortet, Ware reserviert und Kunden zurück in Ihr Geschäft holt.',
+      text: 'Wir zeigen Ihnen, wie Rufanna Kundenfragen beantwortet, Ware reserviert und Kunden zurück in Ihr Geschäft holt.',
     },
     seo: {
-      title: 'BusinessPilot für den Handel – Ihr digitaler Kundenberater',
+      title: 'Rufanna für den Handel – Ihr digitaler Kundenberater',
       description:
-        'BusinessPilot beantwortet Fragen zu Produkten, Verfügbarkeit und Öffnungszeiten, nimmt Reservierungen auf und informiert Kunden bei Wiederverfügbarkeit.',
+        'Rufanna beantwortet Fragen zu Produkten, Verfügbarkeit und Öffnungszeiten, nimmt Reservierungen auf und informiert Kunden bei Wiederverfügbarkeit.',
     },
   },
 
@@ -791,7 +791,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist meine digitale Rezeption.',
     heroTitle: 'Ihre digitale Rezeption für den Salon.',
     heroSubtitle:
-      'BusinessPilot bucht, verschiebt und vergibt Termine neu, auch wenn gerade alle Hände voll zu tun haben. Kein Klingeln mehr mitten im Färben.',
+      'Rufanna bucht, verschiebt und vergibt Termine neu, auch wenn gerade alle Hände voll zu tun haben. Kein Klingeln mehr mitten im Färben.',
     cardTeaser: 'Termine buchen, Absagen neu vergeben, Lücken füllen.',
     image: { src: '/images/branchen/friseur.jpg', alt: 'Friseur schneidet einem Kunden die Haare' },
     overlay: {
@@ -800,7 +800,7 @@ export const industries: Industry[] = [
       text: 'Habt ihr Freitag noch einen Termin für Balayage?',
       checks: ['Kundin erkannt', 'Balayage erkannt (ca. 3 h)', 'Freie Zeiten geprüft', 'Termin angeboten'],
     },
-    keyStatement: 'Während Sie schneiden und färben, nimmt BusinessPilot die Termine an.',
+    keyStatement: 'Während Sie schneiden und färben, nimmt Rufanna die Termine an.',
     customerRequests: [
       {
         text: 'Habt ihr Freitag noch einen Termin für Balayage?',
@@ -861,7 +861,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Termin abgeschlossen', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Haarschnitt vor 5 Wochen', steps: ['Nach 6 Wochen freundlich erinnern', 'Termin bei der Lieblingsfriseurin anbieten', 'Kundin bucht'] },
       aktionen: { text: 'Dauerwelle im Angebot', steps: ['Kundinnen mit Einwilligung auswählen', 'Angebot mit Zeitraum senden', 'Termin gebucht'] },
-      'ki-mitarbeiter': { text: 'Terminbuchung oder Beschwerde?', steps: ['Terminbuchung: BusinessPilot übernimmt', 'Beschwerde: Übergabe an Salonleitung'] },
+      'ki-mitarbeiter': { text: 'Terminbuchung oder Beschwerde?', steps: ['Terminbuchung: Rufanna übernimmt', 'Beschwerde: Übergabe an Salonleitung'] },
       reporting: { text: 'Ihre Salonwoche', steps: ['26 Anrufe', '23 Termine gebucht', '5 Absagen neu vergeben', '4 h 30 min geschätzte Zeitersparnis'], sample: true },
     },
     economicExample: {
@@ -895,12 +895,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 15, missed: 20, orderValue: 75, conversion: 60, days: 5 },
     cta: {
       title: 'Bereit für Ihre digitale Rezeption?',
-      text: 'Wir zeigen Ihnen, wie BusinessPilot Termine bucht, Absagen neu vergibt und Ihren Kalender voll hält.',
+      text: 'Wir zeigen Ihnen, wie Rufanna Termine bucht, Absagen neu vergibt und Ihren Kalender voll hält.',
     },
     seo: {
-      title: 'BusinessPilot für Friseure – Ihre digitale Rezeption',
+      title: 'Rufanna für Friseure – Ihre digitale Rezeption',
       description:
-        'BusinessPilot bucht und verschiebt Salontermine, vergibt Absagen neu und erinnert Stammkundinnen. Die digitale Rezeption für Friseursalons.',
+        'Rufanna bucht und verschiebt Salontermine, vergibt Absagen neu und erinnert Stammkundinnen. Die digitale Rezeption für Friseursalons.',
     },
   },
 
@@ -914,7 +914,7 @@ export const industries: Industry[] = [
     visitorThought: 'Das ist meine digitale Reservierungsannahme.',
     heroTitle: 'Ihre digitale Reservierungsannahme.',
     heroSubtitle:
-      'BusinessPilot nimmt Reservierungen per Telefon und WhatsApp an, beantwortet Gästefragen und gibt Gruppenanfragen strukturiert an Sie weiter, auch mitten im Service.',
+      'Rufanna nimmt Reservierungen per Telefon und WhatsApp an, beantwortet Gästefragen und gibt Gruppenanfragen strukturiert an Sie weiter, auch mitten im Service.',
     cardTeaser: 'Reservierungen annehmen, Gästefragen beantworten, Gruppen anfragen.',
     image: { src: '/images/branchen/restaurant.jpg', alt: 'Servicekraft trägt zwei Teller durch ein Restaurant' },
     overlay: {
@@ -923,7 +923,7 @@ export const industries: Industry[] = [
       text: 'Haben Sie heute Abend einen Tisch für vier?',
       checks: ['Personenzahl erfasst', 'Uhrzeit erfasst', 'Verfügbarkeit geprüft', 'Reservierung bestätigt'],
     },
-    keyStatement: 'Während der Service läuft, nimmt BusinessPilot das Telefon ab.',
+    keyStatement: 'Während der Service läuft, nimmt Rufanna das Telefon ab.',
     customerRequests: [
       {
         text: 'Haben Sie heute Abend einen Tisch für vier?',
@@ -991,7 +991,7 @@ export const industries: Industry[] = [
       bewertungen: { text: 'Besuch am Vorabend', steps: ['Google-Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'] },
       wiederbuchung: { text: 'Geburtstagsfeier im letzten Jahr', steps: ['Einige Wochen vorher erinnern', 'Lieblingstisch anbieten', 'Reservierung bestätigt'] },
       aktionen: { text: 'Livemusik am Freitag', steps: ['Stammgäste mit Einwilligung einladen', 'Tisch direkt anbieten', 'Reservierung per WhatsApp'] },
-      'ki-mitarbeiter': { text: 'Reservierung oder Beschwerde?', steps: ['Reservierung: BusinessPilot übernimmt', 'Beschwerde: Übergabe an Inhaber'] },
+      'ki-mitarbeiter': { text: 'Reservierung oder Beschwerde?', steps: ['Reservierung: Rufanna übernimmt', 'Beschwerde: Übergabe an Inhaber'] },
       reporting: { text: 'Ihre Restaurantwoche', steps: ['52 Anrufe', '38 Reservierungen', '2 Gruppenanfragen', '6 h 05 min geschätzte Zeitersparnis'], sample: true },
     },
     economicExample: {
@@ -1027,12 +1027,12 @@ export const industries: Industry[] = [
     roiDefaults: { requests: 25, missed: 20, orderValue: 180, conversion: 70, days: 6 },
     cta: {
       title: 'Bereit für Ihre digitale Reservierungsannahme?',
-      text: 'Wir zeigen Ihnen, wie BusinessPilot Reservierungen annimmt und Gästefragen beantwortet, während Ihr Service läuft.',
+      text: 'Wir zeigen Ihnen, wie Rufanna Reservierungen annimmt und Gästefragen beantwortet, während Ihr Service läuft.',
     },
     seo: {
-      title: 'BusinessPilot für Restaurants – Ihre digitale Reservierungsannahme',
+      title: 'Rufanna für Restaurants – Ihre digitale Reservierungsannahme',
       description:
-        'BusinessPilot nimmt Reservierungen per Telefon und WhatsApp an, beantwortet Gästefragen und erfasst Gruppenanfragen. Auch mitten im Service.',
+        'Rufanna nimmt Reservierungen per Telefon und WhatsApp an, beantwortet Gästefragen und erfasst Gruppenanfragen. Auch mitten im Service.',
     },
   },
 ];

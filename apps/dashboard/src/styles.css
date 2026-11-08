@@ -1,4 +1,4 @@
-/* BusinessPilot Dashboard – Tokens (identisch zur Website) und Komponenten-Styles */
+/* Rufanna Dashboard – Tokens (identisch zur Website) und Komponenten-Styles */
 :root {
   --navy-950: #071226;
   --navy-900: #0b1b33;
@@ -101,10 +101,7 @@ legend { padding: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- Logo ---------- */
-.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1875rem; letter-spacing: -0.02em; color: var(--white); }
-.logo__text span { color: var(--green-500); }
-.logo--light { color: var(--navy-900); }
-.logo--light .logo__text span { color: var(--green-600); }
+.logo { display: block; height: auto; max-width: 100%; }
 
 /* ---------- Shell ---------- */
 .shell { min-height: 100vh; }
@@ -115,7 +112,6 @@ legend { padding: 0; }
   border-right: 1px solid var(--navy-line);
 }
 .sidebar__brand { position: relative; padding: 20px 20px 16px; border-bottom: 1px solid var(--navy-line); }
-.sidebar__tagline { color: var(--text-on-dark-muted); font-size: 0.8125rem; margin-top: 6px; padding-left: 42px; }
 .sidebar .sidebar__close { position: absolute; top: 16px; right: 12px; display: none; }
 .sidebar__nav { padding: 12px 12px 24px; flex: 1; }
 .nav-section + .nav-section { margin-top: 16px; }
@@ -319,7 +315,7 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--green-600); wi
 /* ---------- Login ---------- */
 .login { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 24px 16px; background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950)); }
 .login__brand { text-align: center; color: var(--text-on-dark-muted); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.login__brand .logo { font-size: 1.5rem; }
+.login__brand .logo { width: min(280px, 80vw); }
 .login__card { width: min(420px, 100%); padding: 28px; display: flex; flex-direction: column; gap: 16px; }
 .login__card h1 { font-size: 1.375rem; }
 .login__legal { display: flex; gap: 20px; font-size: 0.875rem; }
