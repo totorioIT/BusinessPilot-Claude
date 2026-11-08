@@ -46,12 +46,22 @@ const ogImageUrl = new URL(ogImage, Astro.site);
     </main>
     <Footer />
     <script>
-      // Jede Seite beginnt oben, auch wenn die Seite eingebettet angezeigt wird (z. B. in einer Vorschau).
-      // Ausnahmen: Sprungmarken (#preise) und Zurück/Vor im Browser (dort bleibt die alte Position).
+      // Jede Seite beginnt oben, auch eingebettet (z. B. in der Vorschau). Die Vorschau lädt Unterseiten
+      // so, dass der Browser die alte Scroll-Position „wiederherstellt“; das schalten wir hier ab.
+      // Ausnahmen: Sprungmarken (#preise) und Zurück/Vor im Browser.
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       if (!location.hash && nav?.type !== 'back_forward') {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollIntoView({ block: 'start' });
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        let userScrolled = false;
+        const stop = () => { userScrolled = true; };
+        ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((e) => addEventListener(e, stop, { once: true, passive: true }));
+        const toTop = () => { if (!userScrolled) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); };
+        toTop();
+        addEventListener('load', () => {
+          toTop();
+          requestAnimationFrame(toTop);
+          [50, 200, 500].forEach((ms) => setTimeout(toTop, ms));
+        });
       }
     </script>
   </body>
