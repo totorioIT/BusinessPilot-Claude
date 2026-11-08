@@ -266,7 +266,7 @@ function ServicesTab() {
       <div>
         <h2 className="card-title">Wiederbuchung nach dem Besuch</h2>
         <p className="muted small">
-          Tragen Sie ein, nach wie vielen Tagen ein Kunde wieder kommen sollte, zum Beispiel Reifenwechsel 180 Tage oder Haarschnitt 42 Tage. Rufanna
+          Tragen Sie ein, nach wie vielen Tagen ein Kunde wieder kommen sollte, zum Beispiel Reifenwechsel 180 Tage oder Haarschnitt 42 Tage. RufAnna
           schickt dann eine E-Mail mit zwei freien Terminen. Das passiert nur bei Kunden mit Werbe-Einwilligung und nur, wenn die Automation „Wiederbuchung nach
           Besuch“ aktiv ist. Leer lassen heißt: keine Erinnerung.
         </p>
@@ -448,7 +448,7 @@ function TeamTab() {
           </tbody>
         </table>
       </section>
-      <p className="muted small">Mitarbeiter für Termine pflegt derzeit der Rufanna-Support für Sie.</p>
+      <p className="muted small">Mitarbeiter für Termine pflegt derzeit der RufAnna-Support für Sie.</p>
     </div>
   );
 }
@@ -634,7 +634,7 @@ function PrivacyTab() {
     <div className="card card--pad prose">
       <h2>Auftragsverarbeitung (AVV)</h2>
       <p>
-        Rufanna verarbeitet Kundendaten ausschließlich in Ihrem Auftrag gemäß Art. 28 DSGVO. Der
+        RufAnna verarbeitet Kundendaten ausschließlich in Ihrem Auftrag gemäß Art. 28 DSGVO. Der
         Auftragsverarbeitungsvertrag ist Bestandteil Ihres Vertrags; eine Kopie erhalten Sie auf Anfrage vom Support.
       </p>
       <h2>Gesprächsaufzeichnung</h2>

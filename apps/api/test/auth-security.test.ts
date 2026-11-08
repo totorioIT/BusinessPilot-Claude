@@ -124,7 +124,7 @@ describe('two-factor login', () => {
     assert.equal(setupRes.statusCode, 200);
     secret = setupRes.json().secret;
     assert.match(setupRes.json().qrSvg, /^<svg/);
-    assert.match(setupRes.json().uri, /^otpauth:\/\/totp\/Rufanna/);
+    assert.match(setupRes.json().uri, /^otpauth:\/\/totp\/RufAnna/);
 
     assert.equal((await post('/auth/mfa/enable', { code: '000000' }, cookie)).statusCode, 400);
     const enabled = await post('/auth/mfa/enable', { code: await generate({ secret }) }, cookie);

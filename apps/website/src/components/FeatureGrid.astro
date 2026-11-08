@@ -20,7 +20,7 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Funktionen</span>
-      <h2 id={`${id}-title`} class="h2">Was kann Rufanna eigentlich alles?</h2>
+      <h2 id={`${id}-title`} class="h2">Was kann RufAnna eigentlich alles?</h2>
       <p class="lead">{lead}</p>
     </div>
     <ul class="feature-grid" role="list">
@@ -45,9 +45,15 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
               <span class="integration-label"><Icon name="plug" /> {ex.integration}</span>
             )}
             <button class="feature-card__toggle" type="button" aria-expanded="false" aria-controls={panelId} data-accordion>
-              So reagiert Rufanna <Icon name="arrowRight" size={16} />
+              So reagiert RufAnna <Icon name="arrowRight" size={16} />
             </button>
-            <div id={panelId} class="feature-card__workflow" hidden>
+            <div id={panelId} class="feature-card__workflow" role="region" aria-label={`So reagiert RufAnna: ${f.title}`} hidden>
+              <div class="feature-card__workflow-head">
+                <span class="feature-card__workflow-title">So reagiert RufAnna</span>
+                <button class="feature-card__close" type="button" aria-label="Ablauf schließen" data-accordion-close>
+                  <Icon name="close" size={18} />
+                </button>
+              </div>
               <ol>
                 {ex.steps.map((s) => (
                   <li><Icon name="check" size={14} /> {s}</li>
@@ -58,7 +64,8 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
           </li>
         );
       })}
-      <li class="feature-cta">
+    </ul>
+    <div class="feature-cta">
         <div class="feature-cta__intro">
           <h3 class="feature-cta__title">{industryName ? 'Welche Bausteine brauchen Sie?' : 'Welche Bausteine brauchst du?'}</h3>
           <p>{industryName
@@ -77,29 +84,33 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
             </li>
           ))}
         </ul>
-      </li>
-    </ul>
+    </div>
   </div>
 </section>
 
 <script>
+  // Der Ablauf öffnet sich als Ebene innerhalb der Kachel, damit alle Kacheln gleich groß bleiben.
   document.querySelectorAll<HTMLButtonElement>('[data-accordion]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const panel = document.getElementById(btn.getAttribute('aria-controls') || '');
-      if (!panel) return;
-      const open = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', String(!open));
-      panel.hidden = open;
-    });
+    const panel = document.getElementById(btn.getAttribute('aria-controls') || '');
+    if (!panel) return;
+    const close = panel.querySelector<HTMLButtonElement>('[data-accordion-close]');
+    const setOpen = (open: boolean) => {
+      btn.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
+      (open ? close : btn)?.focus();
+    };
+    btn.addEventListener('click', () => setOpen(btn.getAttribute('aria-expanded') !== 'true'));
+    close?.addEventListener('click', () => setOpen(false));
+    panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
   });
 </script>
 
 <style>
-  .feature-grid { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
-  .feature-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+  .feature-grid { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 20px; }
+  .feature-card { position: relative; padding: 24px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
   .feature-card__head { display: flex; align-items: center; gap: 12px; }
   .feature-card__title { font-size: 1.1875rem; }
-  .feature-card__desc { color: var(--text-muted); font-size: .9375rem; }
+  .feature-card__desc { color: var(--text-muted); font-size: .9375rem; flex: 1 1 auto; }
   .feature-card__example { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: .9375rem; }
   .feature-card__example q { quotes: '„' '“'; }
   .feature-card .integration-label { align-self: flex-start; }
@@ -111,7 +122,20 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
   .feature-card__toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
   .feature-card__toggle :global(svg) { transition: transform .2s ease; }
   .feature-card__toggle[aria-expanded='true'] :global(svg) { transform: rotate(90deg); }
-  .feature-card__workflow { border-top: 1px solid var(--gray-200); padding-top: 14px; }
+  .feature-card__workflow {
+    position: absolute; inset: 0; z-index: 1; padding: 20px 24px; overflow-y: auto;
+    background: var(--white); border-radius: inherit;
+  }
+  .feature-card__workflow-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid var(--gray-200);
+  }
+  .feature-card__workflow-title { font-weight: 800; color: var(--green-700); }
+  .feature-card__close {
+    display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none;
+    background: var(--green-50); color: var(--green-700); border: 0; border-radius: 10px; cursor: pointer;
+  }
+  .feature-card__close:hover { background: var(--green-100); }
   .feature-card__workflow ol { list-style: none; display: grid; gap: 0; }
   .feature-card__workflow li {
     position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 0 7px 2px;
@@ -130,9 +154,9 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
     color: var(--text-muted); font-size: .8125rem; line-height: 1.4;
   }
   .feature-card__legal :global(svg) { flex: none; margin-top: 2px; color: var(--green-700); }
-  /* Paket-Box: füllt die restliche Zeile (bei 15 Bausteinen die ganze Breite) */
+  /* Paket-Box unter den Kacheln */
   .feature-cta {
-    grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 28px; align-items: start;
+    margin-top: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 28px; align-items: start;
     padding: 32px; border-radius: var(--radius-lg); color: var(--white); background: var(--navy-900);
   }
   .feature-cta__intro { display: flex; flex-direction: column; gap: 16px; }
@@ -155,7 +179,9 @@ const items = features.map((f) => ({ ...f, example: examples[f.id] ?? f.example 
     .feature-cta { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 640px) {
-    .feature-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .feature-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; gap: 12px; }
+    .feature-cta { margin-top: 12px; }
+    .feature-card__workflow { position: static; inset: auto; padding: 0; overflow: visible; }
     .feature-card { padding: 20px; }
     .feature-cta { padding: 24px 20px; }
   }

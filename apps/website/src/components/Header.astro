@@ -12,14 +12,14 @@ const nav = [
 ---
 <header class="site-header" data-header>
   <div class="container site-header__inner">
-    <a href="/" class="site-header__logo" aria-label="Rufanna Startseite"><Logo /></a>
+    <a href="/" class="site-header__logo" aria-label="RufAnna Startseite"><Logo /></a>
     <nav class="site-nav" aria-label="Hauptnavigation">
       <ul>
         {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
       </ul>
     </nav>
     <div class="site-header__actions">
-      <a class="btn btn--primary site-header__cta" href="/#kontakt">Rufanna testen</a>
+      <a class="btn btn--primary site-header__cta" href="/#kontakt">RufAnna testen</a>
       <button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" data-nav-toggle>
         <span class="sr-only" data-nav-label>Menü öffnen</span>
         <Icon name="menu" class="icon-open" />
@@ -30,7 +30,7 @@ const nav = [
   <nav id="mobile-nav" class="mobile-nav" aria-label="Mobile Navigation" hidden>
     <ul class="container">
       {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
-      <li><a class="btn btn--primary btn--block" href="/#kontakt">Rufanna testen</a></li>
+      <li><a class="btn btn--primary btn--block" href="/#kontakt">RufAnna testen</a></li>
     </ul>
   </nav>
 </header>

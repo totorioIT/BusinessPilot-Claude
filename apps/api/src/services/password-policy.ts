@@ -18,7 +18,7 @@ export async function breachCount(password: string): Promise<number | null> {
   const suffix = sha1.slice(5);
   try {
     const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
-      headers: { 'Add-Padding': 'true', 'User-Agent': 'Rufanna' },
+      headers: { 'Add-Padding': 'true', 'User-Agent': 'RufAnna' },
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;

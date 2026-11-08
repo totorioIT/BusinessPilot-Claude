@@ -1,4 +1,4 @@
-// Die Rufanna-Bausteine mit Standard-Beispiel.
+// Die RufAnna-Bausteine mit Standard-Beispiel.
 // Branchenseiten überschreiben das Beispiel über industry.featureExamples.
 
 export type FeatureId =
@@ -82,7 +82,7 @@ export const features: Feature[] = [
     title: 'KI-Rezeption',
     icon: 'reception',
     description:
-      'Die zentrale digitale Anlaufstelle für Ihre Kunden. Rufanna verbindet Website, WhatsApp und Telefon und startet abhängig vom Anliegen automatisch den passenden Prozess.',
+      'Die zentrale digitale Anlaufstelle für Ihre Kunden. RufAnna verbindet Website, WhatsApp und Telefon und startet abhängig vom Anliegen automatisch den passenden Prozess.',
     example: {
       text: 'Unsere Heizung ist ausgefallen.',
       isQuote: true,
@@ -94,7 +94,7 @@ export const features: Feature[] = [
     title: 'Terminbuchung',
     icon: 'calendar',
     description:
-      'Rufanna prüft passende freie Termine und kann diese direkt mit dem Kunden vereinbaren. Änderungen oder Absagen lassen sich ebenfalls zentral organisieren.',
+      'RufAnna prüft passende freie Termine und kann diese direkt mit dem Kunden vereinbaren. Änderungen oder Absagen lassen sich ebenfalls zentral organisieren.',
     example: {
       text: 'Ich kann nur Dienstagvormittag.',
       isQuote: true,
@@ -128,7 +128,7 @@ export const features: Feature[] = [
     title: 'Automatisches Follow-up',
     icon: 'followup',
     description:
-      'Offene Anfragen und Angebote geraten nicht mehr in Vergessenheit. Rufanna kann nach definierten Regeln automatisch nachfassen oder den zuständigen Mitarbeiter erinnern.',
+      'Offene Anfragen und Angebote geraten nicht mehr in Vergessenheit. RufAnna kann nach definierten Regeln automatisch nachfassen oder den zuständigen Mitarbeiter erinnern.',
     example: {
       text: 'Angebot seit 3 Tagen offen',
       steps: ['Automatisch nachfassen', 'Kunde antwortet', 'Prozess läuft weiter'],
@@ -139,7 +139,7 @@ export const features: Feature[] = [
     title: 'Kundenreaktivierung',
     icon: 'reactivate',
     description:
-      'Rufanna erkennt Kunden, bei denen längere Zeit kein Kontakt oder Auftrag mehr stattgefunden hat. Diese können gezielt wieder angesprochen werden.',
+      'RufAnna erkennt Kunden, bei denen längere Zeit kein Kontakt oder Auftrag mehr stattgefunden hat. Diese können gezielt wieder angesprochen werden.',
     example: {
       text: 'Letzter Termin vor 12 Wochen',
       steps: ['Kunde wird angeschrieben', 'Termin wird angeboten', 'Kunde reaktiviert'],
@@ -150,7 +150,7 @@ export const features: Feature[] = [
     title: 'Angebotsprozesse',
     icon: 'quote',
     description:
-      'Rufanna sammelt bereits während der Anfrage wichtige Informationen und bereitet einen strukturierten Angebotsvorgang vor. Offene Angebote können anschließend nachgefasst werden.',
+      'RufAnna sammelt bereits während der Anfrage wichtige Informationen und bereitet einen strukturierten Angebotsvorgang vor. Offene Angebote können anschließend nachgefasst werden.',
     example: {
       text: 'Ich brauche ein Angebot für eine Wärmepumpe.',
       isQuote: true,
@@ -162,7 +162,7 @@ export const features: Feature[] = [
     title: 'Bewertungsautomation',
     icon: 'star',
     description:
-      'Nach einem abgeschlossenen Termin oder Auftrag kann Rufanna automatisch nach Feedback fragen und eine Google-Bewertung anstoßen.',
+      'Nach einem abgeschlossenen Termin oder Auftrag kann RufAnna automatisch nach Feedback fragen und eine Google-Bewertung anstoßen.',
     example: {
       text: 'Auftrag abgeschlossen',
       steps: ['Bewertungslink an jeden Kunden', 'Kritik sofort intern melden'],
@@ -173,7 +173,7 @@ export const features: Feature[] = [
     title: 'Wiederbuchung',
     icon: 'repeat',
     description:
-      'Nach dem Besuch ist vor dem Besuch. Rufanna merkt sich, wann der nächste Termin sinnvoll ist, zum Beispiel Reifenwechsel, Inspektion, Haarschnitt nach sechs Wochen oder die jährliche Wartung. Zum passenden Zeitpunkt kommt eine Erinnerung, und der Kunde bucht direkt.',
+      'Nach dem Besuch ist vor dem Besuch. RufAnna merkt sich, wann der nächste Termin sinnvoll ist, zum Beispiel Reifenwechsel, Inspektion, Haarschnitt nach sechs Wochen oder die jährliche Wartung. Zum passenden Zeitpunkt kommt eine Erinnerung, und der Kunde bucht direkt.',
     legalNote: 'Nur mit Einwilligung des Kunden, Abmeldung jederzeit möglich.',
     example: {
       text: 'Sommerreifen im April montiert',
@@ -186,7 +186,7 @@ export const features: Feature[] = [
     title: 'Aktionen & Neuigkeiten',
     icon: 'megaphone',
     description:
-      'Neue Felgen eingetroffen, Livemusik am Freitag, Dauerwelle im Angebot oder eine Gutscheinaktion: Rufanna informiert Ihre Stammkunden gezielt per WhatsApp oder E-Mail. Antworten, Reservierungen und Buchungen landen direkt bei Ihnen.',
+      'Neue Felgen eingetroffen, Livemusik am Freitag, Dauerwelle im Angebot oder eine Gutscheinaktion: RufAnna informiert Ihre Stammkunden gezielt per WhatsApp oder E-Mail. Antworten, Reservierungen und Buchungen landen direkt bei Ihnen.',
     legalNote: 'Werbung nur an Kunden mit Einwilligung (Opt-in), Abmeldung mit einem Klick.',
     example: {
       text: 'Gutscheinaktion zum Advent',
@@ -202,7 +202,7 @@ export const features: Feature[] = [
       'Legen Sie fest, wie Ihre digitale Mitarbeiterin kommuniziert und welche Aufgaben sie selbstständig übernehmen darf. Sie bestimmen, wann ein echter Mitarbeiter übernehmen soll.',
     example: {
       text: 'Standardanfrage oder Preisverhandlung?',
-      steps: ['Standardanfrage: Rufanna übernimmt', 'Preisverhandlung: Übergabe an Mitarbeiter'],
+      steps: ['Standardanfrage: RufAnna übernimmt', 'Preisverhandlung: Übergabe an Mitarbeiter'],
     },
   },
   {
@@ -210,9 +210,9 @@ export const features: Feature[] = [
     title: 'Reporting',
     icon: 'chart',
     description:
-      'Sehen Sie auf einen Blick, was Rufanna für Ihr Unternehmen erledigt hat. Anrufe, Nachrichten, Termine, Leads und Automationen werden verständlich ausgewertet.',
+      'Sehen Sie auf einen Blick, was RufAnna für Ihr Unternehmen erledigt hat. Anrufe, Nachrichten, Termine, Leads und Automationen werden verständlich ausgewertet.',
     example: {
-      text: 'Ihre Woche mit Rufanna',
+      text: 'Ihre Woche mit RufAnna',
       steps: ['37 Telefonate', '14 WhatsApp-Anfragen', '8 Termine', '3 Leads', '4 h 18 min geschätzte Zeitersparnis'],
       sample: true,
     },

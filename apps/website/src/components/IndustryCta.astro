@@ -12,12 +12,12 @@ const { industry } = Astro.props;
       <h2 id="cta-title" class="h2 cta__title">{industry.cta.title}</h2>
       <p class="lead">{industry.cta.text}</p>
       <div class="btn-row cta__buttons">
-        <a class="btn btn--primary" href="#cta-form">Rufanna testen <Icon name="arrowRight" size={18} /></a>
+        <a class="btn btn--primary" href="#cta-form">RufAnna testen <Icon name="arrowRight" size={18} /></a>
         <a class="btn btn--outline-light" href="#cta-form">Demo vereinbaren</a>
       </div>
       <p class="cta__thought">„{industry.visitorThought}“</p>
     </div>
-    <ContactForm id="cta-form" formal preselect={industry.slug} subject={`Rufanna Demo – ${industry.name}`} />
+    <ContactForm id="cta-form" formal preselect={industry.slug} subject={`RufAnna Demo – ${industry.name}`} />
   </div>
 </section>
 <style>

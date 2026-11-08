@@ -11,7 +11,7 @@ export function ReviewsPage() {
   const q = useQuery({ queryKey: ['reviews'], queryFn: () => api.get<ReviewsData>('/reviews') });
   return (
     <div className="stack-lg">
-      <PageHeader title="Bewertungen" subtitle="Nach einem abgeschlossenen Auftrag fragt Rufanna automatisch nach einer Bewertung." />
+      <PageHeader title="Bewertungen" subtitle="Nach einem abgeschlossenen Auftrag fragt RufAnna automatisch nach einer Bewertung." />
       <p className="notice">
         <Info aria-hidden="true" />
         <span>

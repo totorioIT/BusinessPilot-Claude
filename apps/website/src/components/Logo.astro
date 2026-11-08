@@ -1,12 +1,12 @@
 ---
-// Rufanna-Logo. dark = auf dunklem Hintergrund (Standard), dann ist „Ruf“ weiß statt dunkelblau.
+// RufAnna-Logo. dark = auf dunklem Hintergrund (Standard), dann ist „Ruf“ weiß statt dunkelblau.
 interface Props { dark?: boolean; height?: number }
 const { dark = true, height = 58 } = Astro.props;
 const src = dark ? '/brand/rufanna-logo-hell.webp' : '/brand/rufanna-logo.webp';
 // Bilddatei: 640 × 221 px
 const width = Math.round((height * 640) / 221);
 ---
-<img class="logo" src={src} width={width} height={height} alt="Rufanna – Deine digitale Mitarbeiterin" decoding="async" />
+<img class="logo" src={src} width={width} height={height} alt="RufAnna – Deine digitale Mitarbeiterin" decoding="async" />
 <style>
   .logo { display: block; height: auto; max-width: 100%; }
 </style>

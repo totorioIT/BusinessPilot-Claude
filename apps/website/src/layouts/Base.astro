@@ -45,5 +45,14 @@ const ogImageUrl = new URL(ogImage, Astro.site);
       <slot />
     </main>
     <Footer />
+    <script>
+      // Jede Seite beginnt oben, auch wenn die Seite eingebettet angezeigt wird (z. B. in einer Vorschau).
+      // Ausnahmen: Sprungmarken (#preise) und Zurück/Vor im Browser (dort bleibt die alte Position).
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      if (!location.hash && nav?.type !== 'back_forward') {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollIntoView({ block: 'start' });
+      }
+    </script>
   </body>
 </html>

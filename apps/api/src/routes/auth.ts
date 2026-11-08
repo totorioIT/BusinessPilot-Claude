@@ -240,7 +240,7 @@ export async function authRoutes(app: FastifyInstance) {
         tenantId,
         type: 'support.access',
         actor: userActor(a),
-        summary: `Support-Zugriff durch ${a.userName} (Rufanna)`,
+        summary: `Support-Zugriff durch ${a.userName} (RufAnna)`,
       });
     }
     return me(app, a.userId, tenantId);
@@ -280,11 +280,11 @@ export async function authRoutes(app: FastifyInstance) {
     const mailer = await systemMailer(db, user.id);
     const res = await mailer.send({
       to: user.email,
-      fromName: 'Rufanna',
+      fromName: 'RufAnna',
       subject: 'Passwort zurücksetzen',
       text:
-        `Hallo ${user.name},\n\nfür Ihr Rufanna-Konto wurde ein neues Passwort angefordert. Mit diesem Link legen Sie es fest:\n${url}\n\n` +
-        `Der Link ist 30 Minuten gültig und funktioniert nur einmal. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail. Ihr Passwort bleibt dann unverändert.\n\nIhr Rufanna-Team`,
+        `Hallo ${user.name},\n\nfür Ihr RufAnna-Konto wurde ein neues Passwort angefordert. Mit diesem Link legen Sie es fest:\n${url}\n\n` +
+        `Der Link ist 30 Minuten gültig und funktioniert nur einmal. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail. Ihr Passwort bleibt dann unverändert.\n\nIhr RufAnna-Team`,
     });
     if (!res.ok) req.log.error({ reason: res.error }, 'Passwort-Reset-Mail konnte nicht gesendet werden');
     await tenantEvent(user.id, 'user.password_reset_requested', `Passwort-Zurücksetzen für ${user.name} angefordert`);
