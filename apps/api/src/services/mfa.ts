@@ -8,7 +8,7 @@ import { decrypt, encrypt } from '../lib/secretbox.js';
 // encrypted with APP_SECRET; each accepted code's time step is remembered so it can't be reused.
 // Ten recovery codes, stored only as hashes, help when the phone is lost.
 
-const ISSUER = 'BusinessPilot';
+const ISSUER = 'Rufanna';
 /** One period (30 s) before and after, for clocks that are slightly off. */
 const TOLERANCE_SECONDS = 30;
 const RECOVERY_CODE_COUNT = 10;

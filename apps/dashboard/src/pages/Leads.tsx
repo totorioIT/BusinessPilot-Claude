@@ -133,7 +133,7 @@ export function LeadsPage() {
     <div className="stack-lg">
       <PageHeader
         title="Leads"
-        subtitle="Verkaufspipeline – BusinessPilot empfiehlt den nächsten Schritt."
+        subtitle="Verkaufspipeline – Rufanna empfiehlt den nächsten Schritt."
         actions={
           <button type="button" className="btn btn--primary" onClick={() => setOpen(true)}>
             <Plus aria-hidden="true" /> Neuer Lead

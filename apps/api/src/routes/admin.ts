@@ -197,7 +197,7 @@ export async function adminRoutes(app: FastifyInstance) {
     await db.delete(sessions).where(eq(sessions.userId, user.id));
     const own = await db.select({ tenantId: memberships.tenantId }).from(memberships).where(eq(memberships.userId, user.id));
     for (const m of own) {
-      await recordEvent(db, { tenantId: m.tenantId, type: 'user.mfa_reset', actor: userActor(a), summary: `Zwei-Faktor-Anmeldung von ${user.name} durch den BusinessPilot-Support zurückgesetzt` });
+      await recordEvent(db, { tenantId: m.tenantId, type: 'user.mfa_reset', actor: userActor(a), summary: `Zwei-Faktor-Anmeldung von ${user.name} durch den Rufanna-Support zurückgesetzt` });
     }
     return { ok: true };
   });

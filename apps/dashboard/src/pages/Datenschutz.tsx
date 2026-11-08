@@ -7,7 +7,7 @@ export function DatenschutzPage() {
   return (
     <div className="login">
       <div className="login__brand">
-        <Logo />
+        <Logo height={72} />
       </div>
       <main className="legal card">
         <h1>Datenschutzerklärung</h1>

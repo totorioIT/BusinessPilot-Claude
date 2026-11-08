@@ -17,11 +17,11 @@ const channelLabel = { Anruf: 'Eingehender Anruf', WhatsApp: 'Neue WhatsApp-Nach
           <li aria-current="page">{industry.name}</li>
         </ol>
       </nav>
-      <span class="badge badge--solid"><Icon name={industry.icon} size={16} /> BusinessPilot für {industry.name}</span>
+      <span class="badge badge--solid"><Icon name={industry.icon} size={16} /> Rufanna für {industry.name}</span>
       <h1 id="ihero-title" class="ihero__title">{industry.heroTitle}</h1>
       <p class="ihero__text">{industry.heroSubtitle}</p>
       <div class="btn-row">
-        <a class="btn btn--primary" href="#kontakt">BusinessPilot testen <Icon name="arrowRight" size={18} /></a>
+        <a class="btn btn--primary" href="#kontakt">Rufanna testen <Icon name="arrowRight" size={18} /></a>
         <a class="btn btn--outline-light" href="#anfragen">Beispiele ansehen</a>
       </div>
       {industry.autopilotPromise && (
@@ -48,7 +48,7 @@ const channelLabel = { Anruf: 'Eingehender Anruf', WhatsApp: 'Neue WhatsApp-Nach
         </div>
         <p class="overlay__quote">„{industry.overlay.text}“</p>
         <div class="overlay__status">
-          <span class="overlay__status-title">BusinessPilot</span>
+          <span class="overlay__status-title">Rufanna</span>
           <ul>
             {industry.overlay.checks.map((c) => <li><Icon name="check" size={14} /> {c}</li>)}
           </ul>

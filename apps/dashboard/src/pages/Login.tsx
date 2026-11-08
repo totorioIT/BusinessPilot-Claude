@@ -13,8 +13,7 @@ function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="login">
       <div className="login__brand">
-        <Logo />
-        <p>Dein digitaler Mitarbeiter</p>
+        <Logo height={96} />
       </div>
       <div className="login__card card">{children}</div>
       <nav className="login__legal" aria-label="Rechtliches">
