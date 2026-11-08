@@ -9,7 +9,7 @@ const { industry } = Astro.props;
     <div class="section-head">
       <span class="eyebrow">Aus dem Alltag · {industry.name}</span>
       <h2 id="anfragen-title" class="h2">Diese Anfragen kennen Sie aus Ihrem Alltag</h2>
-      <p class="lead">Echte Sätze Ihrer Kunden. Und was Rufanna daraus macht.</p>
+      <p class="lead">Echte Sätze Ihrer Kunden. Und was RufAnna daraus macht.</p>
     </div>
 
     <ul class="said" role="list" aria-label="Typische Kundenanfragen">
@@ -18,8 +18,8 @@ const { industry } = Astro.props;
 
     <div class="flow-legend" aria-hidden="true">
       <span>Kunde sagt</span><Icon name="arrowRight" size={16} />
-      <span>Rufanna versteht</span><Icon name="arrowRight" size={16} />
-      <span>Rufanna handelt</span><Icon name="arrowRight" size={16} />
+      <span>RufAnna versteht</span><Icon name="arrowRight" size={16} />
+      <span>RufAnna handelt</span><Icon name="arrowRight" size={16} />
       <span>Geschäftliches Ergebnis</span>
     </div>
 
@@ -32,11 +32,11 @@ const { industry } = Astro.props;
             {r.plan && <span class="plan-tag">{r.plan}</span>}
           </div>
           <div class="request__col">
-            <span class="request__label">Rufanna versteht</span>
+            <span class="request__label">RufAnna versteht</span>
             <p class="request__intent">{r.intent}</p>
           </div>
           <div class="request__col request__act">
-            <span class="request__label">Rufanna handelt</span>
+            <span class="request__label">RufAnna handelt</span>
             {r.integration && <span class="integration-label"><Icon name="plug" /> {r.integration}</span>}
             <ol class="steps">
               {r.steps.map((s) => <li>{s}</li>)}
@@ -61,7 +61,7 @@ const { industry } = Astro.props;
 
     {industry.quickExamples.length > 0 && (
       <div class="quick">
-        <h3 class="h3">Weitere Anfragen, die Rufanna übernimmt</h3>
+        <h3 class="h3">Weitere Anfragen, die RufAnna übernimmt</h3>
         <ul class="quick__grid" role="list">
           {industry.quickExamples.map((q) => (
             <li class="quick__card">

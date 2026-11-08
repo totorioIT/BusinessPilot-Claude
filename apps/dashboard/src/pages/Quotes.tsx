@@ -254,7 +254,7 @@ export function QuotesPage() {
     <div className="stack-lg">
       <PageHeader
         title="Angebote"
-        subtitle="Rufanna sammelt Infos aus Gesprächen und bereitet Angebote vor."
+        subtitle="RufAnna sammelt Infos aus Gesprächen und bereitet Angebote vor."
         actions={
           <button type="button" className="btn btn--primary" onClick={() => setNewOpen(true)}>
             <Plus aria-hidden="true" /> Neues Angebot

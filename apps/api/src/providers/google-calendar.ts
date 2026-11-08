@@ -138,7 +138,7 @@ export function googleCalendar(cfg: GoogleCalendarConfig): CalendarProvider {
         const token = await accessToken(cfg, cfg.refreshToken);
         const ev = await api<{ id: string }>(token, 'POST', `/calendars/${encodeURIComponent(calendarId)}/events`, {
           summary: title,
-          description: description ?? 'Gebucht über Rufanna',
+          description: description ?? 'Gebucht über RufAnna',
           start: { dateTime: start.toISOString(), timeZone: cfg.timezone },
           end: { dateTime: end.toISOString(), timeZone: cfg.timezone },
         });

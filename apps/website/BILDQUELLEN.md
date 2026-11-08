@@ -14,9 +14,9 @@ siehe https://www.pexels.com/de-de/lizenz/ (bei erkennbaren Personen: Frage an d
 | public/images/branchen/handel.jpg | 800 × 640 | Pexels (laut README) | [PLATZHALTER] | [PLATZHALTER] | Pexels-Lizenz | [PLATZHALTER] |
 | public/images/branchen/friseur.jpg | 650 × 520 | Pexels (laut README) | [PLATZHALTER] | [PLATZHALTER] | Pexels-Lizenz | [PLATZHALTER] |
 | public/images/branchen/restaurant.jpg | 666 × 533 | Pexels (laut README) | [PLATZHALTER] | [PLATZHALTER] | Pexels-Lizenz | [PLATZHALTER] |
-| public/og-default.png | 1200 × 630 | Rufanna-Logo (von Philipp geliefert) auf Weiß | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
-| public/brand/rufanna-logo.webp, rufanna-logo-hell.webp | 640 × 221 | Rufanna-Logo (von Philipp geliefert), freigestellt; „hell“ = Schriftzug „Ruf“ weiß | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
-| public/favicon.ico, favicon-32.png, apple-touch-icon.png, icon-192.png, icon-512.png | 16 bis 512 px | Ausschnitt (Gesicht) aus dem Rufanna-Logo | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
+| public/og-default.png | 1200 × 630 | RufAnna-Logo (von Philipp geliefert) auf Weiß | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
+| public/brand/rufanna-logo.webp, rufanna-logo-hell.webp | 640 × 221 | RufAnna-Logo (von Philipp geliefert), freigestellt; „hell“ = Schriftzug „Ruf“ weiß | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
+| public/favicon.ico, favicon-32.png, apple-touch-icon.png, icon-192.png, icon-512.png | 16 bis 512 px | Ausschnitt (Gesicht) aus dem RufAnna-Logo | – | – | eigenes Logo, Rechte klären* | 2026-11-08 |
 
 \* Vor Markenanmeldung festhalten, wer das Logo erstellt hat (Designer oder KI-Werkzeug) und dass die Nutzungsrechte bei der Firma liegen.
 

@@ -1,4 +1,4 @@
-/* Rufanna Design-Tokens und Basis-Styles */
+/* RufAnna Design-Tokens und Basis-Styles */
 :root {
   --navy-950: #071226;
   --navy-900: #0b1b33;
@@ -6,11 +6,11 @@
   --navy-700: #1b3563;
   --navy-line: rgba(255, 255, 255, 0.12);
 
-  --green-500: #19c37d;
-  --green-600: #12a86a;
-  --green-700: #0b7a4c; /* 2026-11-06: dunkler für Kontrast ≥ 4,5:1 (WCAG AA) */
-  --green-100: #d6f5e6;
-  --green-50: #ecfaf3;
+  --green-500: #5cb82a; /* Logo-Grün (hell) */
+  --green-600: #4a9e1c;
+  --green-700: #2f7310; /* Logo-Grün dunkel, Kontrast 5,9:1 auf Weiß (WCAG AA) */
+  --green-100: #dcefcf;
+  --green-50: #f0f9ea;
 
   --white: #ffffff;
   --gray-50: #f6f8fb;
@@ -129,7 +129,7 @@ ul, ol { margin: 0; padding: 0; }
   background: var(--green-50); color: var(--green-700);
 }
 .icon-tile svg { width: 22px; height: 22px; }
-.section--dark .icon-tile, .icon-tile--dark { background: rgba(25, 195, 125, 0.14); color: var(--green-500); }
+.section--dark .icon-tile, .icon-tile--dark { background: rgba(92, 184, 42, 0.14); color: var(--green-500); }
 
 /* Card */
 .card {
@@ -142,8 +142,8 @@ ul, ol { margin: 0; padding: 0; }
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 12px; border-radius: 999px;
   font-size: 0.8125rem; font-weight: 700;
-  background: rgba(25, 195, 125, 0.14); color: var(--green-500);
-  border: 1px solid rgba(25, 195, 125, 0.35);
+  background: rgba(92, 184, 42, 0.14); color: var(--green-500);
+  border: 1px solid rgba(92, 184, 42, 0.35);
 }
 .badge--solid { background: var(--green-500); color: var(--navy-900); border-color: var(--green-500); }
 .example-label {
@@ -187,7 +187,7 @@ ul, ol { margin: 0; padding: 0; }
 .media {
   position: relative; overflow: hidden; border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at 1px 1px, rgba(25, 195, 125, 0.18) 1px, transparent 0) 0 0 / 18px 18px,
+    radial-gradient(circle at 1px 1px, rgba(92, 184, 42, 0.18) 1px, transparent 0) 0 0 / 18px 18px,
     var(--navy-800);
 }
 .media img { width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
