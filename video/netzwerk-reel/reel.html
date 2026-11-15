@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Netzwerk Explorer Reel</title>
+<style>
+  :root{
+    --navy:#0b2a6f; --blue:#1d4ed8; --sky:#dbe7ff; --ink:#0a1633; --mute:#5b6b8c;
+    --grid:#e6edf9; --bg:#f7f9fe; --line:#c9d6f0;
+    --orange:#f59e0b; --green:#16a34a; --purple:#7c3aed; --red:#dc2626; --yellow:#facc15;
+    --mono:"DejaVu Sans Mono", monospace; --sans:"Inter", "DejaVu Sans", sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+  body{font-family:var(--sans);color:var(--ink);position:relative;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:40px 40px;}
+  /* header */
+  #hdr{position:absolute;left:0;top:0;width:1080px;height:150px;padding:34px 48px 0;display:flex;align-items:center;gap:22px;
+    background:rgba(255,255,255,.92);border-bottom:2px solid var(--line)}
+  .logo{width:78px;height:78px;border:3px solid var(--navy);display:grid;place-items:center;position:relative}
+  .logo::before,.logo::after{content:"";position:absolute;width:16px;height:16px;border:3px solid var(--navy);background:#fff}
+  .logo::before{left:-9px;top:-9px}.logo::after{right:-9px;bottom:-9px}
+  .brand{font-family:var(--mono);font-weight:bold;font-size:38px;letter-spacing:3px;color:var(--navy)}
+  .brand i{font-style:italic;color:var(--blue)}
+  .sub{font-family:var(--mono);font-size:19px;color:var(--mute);letter-spacing:1.5px;margin-top:6px}
+  .lang{margin-left:auto;font-family:var(--mono);font-size:22px;border:2px solid var(--line);padding:10px 16px;color:var(--navy);font-weight:bold}
+  /* caption */
+  #cap{position:absolute;left:48px;right:48px;top:182px;height:250px;display:flex;flex-direction:column;justify-content:center}
+  #capTag{font-family:var(--mono);font-size:24px;font-weight:bold;letter-spacing:3px;color:#fff;background:var(--navy);
+    align-self:flex-start;padding:8px 16px;margin-bottom:18px}
+  #capTxt{font-weight:800;font-size:66px;line-height:1.08;letter-spacing:-1.5px}
+  #capTxt mark{background:linear-gradient(transparent 58%,#ffe066 58%);color:var(--ink);padding:0 4px}
+  #capTxt b{color:var(--blue)}
+  /* tabs + stage */
+  #tabs{position:absolute;left:48px;top:458px;display:flex;font-family:var(--mono);font-size:21px;font-weight:bold;letter-spacing:2px;z-index:3}
+  #tabs span{padding:10px 18px;border:2px solid var(--line);background:#fff;color:var(--mute)}
+  #tabs span.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  #stageWrap{position:absolute;left:0;top:440px;width:1080px;height:820px;overflow:hidden}
+  #stage{width:1080px;height:820px;display:block}
+  /* step panel */
+  #step{position:absolute;left:0;top:1262px;width:1080px;height:300px;background:#fff;border-top:3px solid var(--navy);padding:26px 48px}
+  .stH{display:flex;align-items:center;font-family:var(--mono);font-size:24px;font-weight:bold;letter-spacing:3px;color:var(--navy)}
+  .stH .ov{margin-left:auto;font-size:18px;border:2px solid var(--line);padding:6px 12px;color:var(--mute)}
+  #stN{font-family:var(--mono);font-size:19px;color:var(--mute);letter-spacing:2px;margin-top:18px}
+  #stT{font-family:var(--mono);font-size:44px;font-weight:bold;letter-spacing:1px;margin-top:4px;color:var(--ink)}
+  #stD{font-size:28px;line-height:1.38;color:#2b3a5c;margin-top:10px;max-width:960px}
+  #stKV{display:flex;gap:16px;margin-top:16px;font-family:var(--mono);font-size:21px}
+  #stKV div{border:2px solid var(--line);padding:6px 12px;background:var(--bg)}
+  #stKV b{color:var(--mute);font-weight:normal;margin-right:10px}
+  /* packet log */
+  #log{position:absolute;left:0;top:1562px;width:1080px;height:200px;background:#fff;border-top:2px solid var(--line);padding:16px 48px 0;font-family:var(--mono)}
+  #log h4{font-size:21px;letter-spacing:3px;color:var(--navy);display:flex;gap:22px;align-items:center}
+  #log h4 em{font-style:normal;font-size:16px;color:var(--mute);letter-spacing:1px;display:flex;align-items:center;gap:6px}
+  #log h4 em i{width:12px;height:12px;border-radius:50%;display:inline-block}
+  .row{display:grid;grid-template-columns:44px 96px 218px 218px 80px 1fr;font-size:18px;height:30px;align-items:center;color:#24324f;white-space:nowrap;overflow:hidden}
+  .row.hd{color:var(--mute);font-size:15px;letter-spacing:1px;height:26px;border-bottom:1px solid var(--line)}
+  .row .n{width:24px;height:24px;border-radius:50%;color:#fff;font-size:13px;display:grid;place-items:center;font-weight:bold}
+  /* controls */
+  #ctl{position:absolute;left:0;top:1762px;width:1080px;height:158px;background:#fff;border-top:2px solid var(--line);padding:18px 48px;display:flex;gap:14px;align-items:flex-start;font-family:var(--mono);font-weight:bold}
+  #ctl .b{border:2px solid var(--line);height:62px;min-width:72px;display:grid;place-items:center;font-size:22px;color:var(--navy);padding:0 16px}
+  #ctl .p{background:var(--navy);color:#fff;border-color:var(--navy);flex:1;letter-spacing:3px}
+  #prog{position:absolute;left:48px;right:48px;top:1752px;height:6px;background:var(--line);z-index:5}
+  #progF{height:100%;background:var(--blue);width:0}
+  /* outro */
+  #out{position:absolute;inset:0;background:var(--navy);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;opacity:0;z-index:20;
+    background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:40px 40px}
+  #out .k{font-family:var(--mono);font-size:30px;letter-spacing:6px;color:#9db8ff}
+  #out .big{font-weight:900;font-size:128px;line-height:1;letter-spacing:-3px;margin:30px 0 40px;color:#ffe066}
+  #out .t2{font-size:46px;font-weight:700;max-width:860px;line-height:1.2}
+  #out .pill{margin-top:60px;font-family:var(--mono);font-size:28px;border:3px solid #fff;padding:16px 30px;letter-spacing:3px}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div class="logo"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M23 3 41 13v20L23 43 5 33V13Z" fill="#1d4ed8"/><path d="M5 13l18 10 18-10M23 23v20" stroke="#fff" stroke-width="3" fill="none"/></svg></div>
+  <div><div class="brand">NETZWERK <i>EXPLORER</i></div><div class="sub">SO FUNKTIONIERT DAS INTERNET</div></div>
+  <div class="lang">◍ DE</div>
+</div>
+<div id="cap"><div id="capTag">TEIL 1</div><div id="capTxt"></div></div>
+<div id="tabs"><span class="on">◈ NETZWERK</span><span>⇄ ABLAUF</span></div>
+<div id="stageWrap"><svg id="stage" viewBox="0 0 1080 820"></svg></div>
+<div id="step">
+  <div class="stH">SCHRITT-DETAILS <span class="ov">‹ ÜBERSICHT</span></div>
+  <div id="stN"></div><div id="stT"></div><div id="stD"></div><div id="stKV"></div>
+</div>
+<div id="log"><h4>PAKETFLUSS <em><i style="background:#1d4ed8"></i>Laptop</em><em><i style="background:#7c3aed"></i>Server</em><em><i style="background:#f59e0b"></i>Router</em></h4><div id="rows"></div></div>
+<div id="prog"><div id="progF"></div></div>
+<div id="ctl"><div class="b">1×</div><div class="b">‹</div><div class="b p" id="pp">❚❚ PAUSE</div><div class="b">SCHRITT</div><div class="b">↻</div></div>
+<div id="out">
+  <div class="k">NETZWERK EXPLORER</div>
+  <div class="big">FOLGE FÜR<br>MEHR</div>
+  <div class="t2">Teil 2: Wie <span style="color:#9db8ff">VPN &amp; TLS</span> deine Daten schützen</div>
+  <div class="pill">SPEICHERN · TEILEN · FOLGEN</div>
+</div>
+
+<script>
+const DUR = 30.5;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,k)=>a+(b-a)*k;
+const ease=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+const easeOut=k=>1-Math.pow(1-k,3);
+const back=k=>{const c=1.7;return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2)};
+const prog=(t,a,b)=>clamp((t-a)/(b-a));
+
+/* ---------- scenes ---------- */
+const SC=[
+ {id:'hook',a:0,b:3,tag:'IN 30 SEKUNDEN',cap:'Was passiert, wenn du eine <mark>Webseite öffnest?</mark>'},
+ {id:'s1',a:3,b:7,tag:'SCHRITT 1',cap:'Dein Laptop fragt zuerst den <b>Router</b>',
+   n:'SCHRITT 1 VON 5',t:'CLIENT-ANFRAGE',d:'Du tippst beispiel.de ein. Dein Laptop schickt die Anfrage an sein Standard-Gateway – den Router.',kv:[['Laptop','192.168.1.10'],['Gateway','192.168.1.1']]},
+ {id:'s2',a:7,b:11.5,tag:'SCHRITT 2',cap:'<b>DNS</b> übersetzt den Namen in eine <mark>IP-Adresse</mark>',
+   n:'SCHRITT 2 VON 5',t:'DNS-AUFLÖSUNG',d:'Computer verstehen keine Namen. Der Resolver 8.8.8.8 liefert die IP von beispiel.de zurück.',kv:[['Port','UDP 53'],['Antwort','A 203.0.113.10']]},
+ {id:'s3',a:11.5,b:15.5,tag:'SCHRITT 3',cap:'Händeschütteln: <mark>SYN · SYN-ACK · ACK</mark>',
+   n:'SCHRITT 3 VON 5',t:'TCP-VERBINDUNG',d:'Bevor Daten fließen, einigen sich Laptop und Webserver per Drei-Wege-Handshake auf eine Verbindung.',kv:[['Port','TCP 443'],['Ablauf','3 Pakete']]},
+ {id:'s4',a:15.5,b:19.5,tag:'SCHRITT 4',cap:'<b>HTTP</b> holt die eigentliche Seite',
+   n:'SCHRITT 4 VON 5',t:'HTTP-AUSTAUSCH',d:'Der Browser fordert die Seite an. Der Server antwortet mit Status 200 und dem HTML-Code.',kv:[['Anfrage','GET /'],['Antwort','200 OK']]},
+ {id:'s5',a:19.5,b:21.5,tag:'SCHRITT 5',cap:'Fertig – in <mark>unter 100 ms.</mark>',
+   n:'SCHRITT 5 VON 5',t:'SEITE GELADEN',d:'Der Browser baut HTML, CSS und Bilder zusammen. Für jede Datei läuft das Ganze erneut ab.',kv:[['Dauer','≈ 80 ms'],['Pakete','8']]},
+ {id:'cp1',a:21.5,b:23,tag:'BONUS',cap:'Und warum will <mark>Hotel-WLAN</mark> erst ein Login?',
+   n:'SCHRITT 1 VON 4',t:'VERBUNDEN, OFFLINE',d:'Dein Laptop hat eine IP vom Hotel-Router bekommen – aber das Internet ist noch gesperrt.',kv:[['Wo','Hotels, Cafés, Züge'],['Typ','Captive Portal']]},
+ {id:'cp2',a:23,b:24.8,tag:'BONUS',cap:'Dein System testet heimlich: <b>Bin ich online?</b>',
+   n:'SCHRITT 2 VON 4',t:'INTERNET-CHECK',d:'Das Betriebssystem ruft im Hintergrund eine Testseite auf, um zu prüfen, ob das Netz wirklich offen ist.',kv:[['Ziel','203.0.113.30'],['Port','TCP 80']]},
+ {id:'cp3',a:24.8,b:26.4,tag:'BONUS',cap:'Der Router <mark>fängt die Anfrage ab</mark>',
+   n:'SCHRITT 3 VON 4',t:'UMLEITUNG',d:'Statt der Testseite antwortet der Hotel-Router selbst – mit „302 Found“ und der Login-Seite.',kv:[['Status','302 Found'],['Ziel','login.hotel.de']]},
+ {id:'cp4',a:26.4,b:28,tag:'BONUS',cap:'Login ok → Router lässt dich <b>durch</b>',
+   n:'SCHRITT 4 VON 4',t:'FREIGESCHALTET',d:'Nach dem Login merkt sich der Router deine MAC-Adresse. Ab jetzt fließen deine Pakete ins Internet.',kv:[['Merkmal','MAC-Adresse'],['Status','online ✓']]},
+ {id:'out',a:28,b:DUR,tag:'',cap:''}
+];
+const sceneAt=t=>SC.find(s=>t>=s.a&&t<s.b)||SC[SC.length-1];
+
+/* ---------- nodes ---------- */
+const N1={client:{x:190,y:575,k:'laptop',name:'Laptop',ip:'192.168.1.10'},
+  router:{x:470,y:395,k:'router',name:'Router',ip:'192.168.1.1'},
+  inet:{x:770,y:585,k:'cloud',name:'Internet',ip:''},
+  dns:{x:690,y:165,k:'server',name:'DNS-Resolver',ip:'8.8.8.8'},
+  web:{x:935,y:300,k:'server',name:'Webserver',ip:'203.0.113.10'}};
+const N2={client:{x:200,y:575,k:'laptop',name:'Laptop',ip:'192.168.1.10'},
+  router:{x:520,y:395,k:'router',name:'Hotel-Router',ip:'192.168.1.1 · Portal'},
+  inet:{x:850,y:590,k:'cloud',name:'Internet',ip:''},
+  web:{x:880,y:190,k:'server',name:'Testseite',ip:'203.0.113.30'}};
+const E1=[['client','router'],['router','dns'],['router','inet'],['inet','web']];
+const E2=[['client','router'],['router','inet'],['inet','web']];
+
+/* ---------- packets ---------- */
+const BLUE='#1d4ed8',OR='#f59e0b',PU='#7c3aed',GR='#16a34a',RD='#dc2626',YE='#eab308';
+const P=[
+ {set:1,path:['client','router'],a:3.7,b:5.6,t:'ANFRAGE',s:'https://beispiel.de',c:BLUE,log:['0.000s','192.168.1.10','192.168.1.1','ETH','Frame ans Gateway']},
+ {set:1,path:['client','router','dns'],a:7.3,b:9.0,t:'DNS-ANFRAGE',s:'A? beispiel.de',c:OR,log:['0.004s','192.168.1.10','8.8.8.8','DNS','Abfrage A beispiel.de']},
+ {set:1,path:['dns','router','client'],a:9.3,b:11.0,t:'DNS-ANTWORT',s:'A 203.0.113.10',c:PU,log:['0.021s','8.8.8.8','192.168.1.10','DNS','Antwort A 203.0.113.10']},
+ {set:1,path:['client','router','inet','web'],a:11.7,b:13.0,t:'SYN',s:'an 203.0.113.10:443',c:GR,log:['0.023s','192.168.1.10','203.0.113.10','TCP','52410 → 443 [SYN]']},
+ {set:1,path:['web','inet','router','client'],a:13.1,b:14.4,t:'SYN-ACK',s:'bereit!',c:PU,log:['0.041s','203.0.113.10','192.168.1.10','TCP','443 → 52410 [SYN, ACK]']},
+ {set:1,path:['client','router','inet','web'],a:14.4,b:15.4,t:'ACK',s:'verbunden',c:GR,log:['0.042s','192.168.1.10','203.0.113.10','TCP','52410 → 443 [ACK]']},
+ {set:1,path:['client','router','inet','web'],a:15.7,b:17.3,t:'GET /',s:'Host: beispiel.de',c:YE,log:['0.044s','192.168.1.10','203.0.113.10','HTTP','GET / HTTP/1.1']},
+ {set:1,path:['web','inet','router','client'],a:17.5,b:19.2,t:'200 OK',s:'text/html · 14 KB',c:PU,log:['0.079s','203.0.113.10','192.168.1.10','HTTP','HTTP/1.1 200 OK']},
+ {set:2,path:['client','router'],a:23.1,b:24.3,t:'SYN',s:'an 203.0.113.30:80',c:GR,blocked:true,log:['0.000s','192.168.1.10','203.0.113.30','TCP','52411 → 80 [SYN]']},
+ {set:2,path:['router','client'],a:24.9,b:26.1,t:'302 FOUND',s:'→ login.hotel.de',c:OR,log:['0.002s','192.168.1.1','192.168.1.10','HTTP','302 Found → login.hotel.de']},
+ {set:2,path:['client','router'],a:26.45,b:27.05,t:'POST /login',s:'Zimmer 214',c:BLUE,log:['9.204s','192.168.1.10','192.168.1.1','HTTP','POST /login']},
+ {set:2,path:['client','router','inet','web'],a:27.1,b:27.95,t:'GET /test',s:'200 OK ✓',c:GR,log:['9.340s','192.168.1.10','203.0.113.30','HTTP','GET /test → 200 OK']},
+];
+/* audio cues exported for the soundtrack */
+window.AUDIO_CUES={dur:DUR,send:P.map(p=>p.a),arrive:P.map(p=>p.b),scenes:SC.map(s=>s.a),blocked:[24.3],outro:28};
+
+/* ---------- device drawings ---------- */
+const S='#0b2a6f';
+function laptop(screen){
+  return `<g>
+   <path d="M-110 8 L0 -47 L110 8 L0 63 Z" fill="#fff" stroke="${S}" stroke-width="3"/>
+   <path d="M-110 8 L0 63 L0 75 L-110 20 Z" fill="#c7d6f5" stroke="${S}" stroke-width="3"/>
+   <path d="M0 63 L110 8 L110 20 L0 75 Z" fill="#9fb6e8" stroke="${S}" stroke-width="3"/>
+   <path d="M-62 10 L0 -21 L62 10 L0 41 Z" fill="none" stroke="#9fb6e8" stroke-width="2"/>
+   <path d="M-40 10 L0 -10 M-20 20 L20 0 M0 30 L40 10" stroke="#9fb6e8" stroke-width="2"/>
+   <path d="M-110 8 L0 -47 L0 -185 L-110 -130 Z" fill="#e8efff" stroke="${S}" stroke-width="3"/>
+   <path d="M-99 0 L-11 -44 L-11 -170 L-99 -126 Z" fill="${screen?'#fff':'#bcd0fb'}" stroke="${S}" stroke-width="2"/>
+   ${screen||''}
+  </g>`;
+}
+function router(){
+  return `<g>
+   <line x1="40" y1="-22" x2="40" y2="-110" stroke="${S}" stroke-width="5"/><circle cx="40" cy="-114" r="7" fill="${BLUE}" stroke="${S}" stroke-width="3"/>
+   <path d="M-80 0 L0 -40 L80 0 L0 40 Z" fill="#fff" stroke="${S}" stroke-width="3"/>
+   <path d="M-80 0 L0 40 L0 88 L-80 48 Z" fill="#c7d6f5" stroke="${S}" stroke-width="3"/>
+   <path d="M0 40 L80 0 L80 48 L0 88 Z" fill="#9fb6e8" stroke="${S}" stroke-width="3"/>
+   <path d="M-62 30 L-18 52 L-18 72 L-62 50 Z" fill="#fff" stroke="${S}" stroke-width="2"/>
+   <circle cx="20" cy="56" r="4" fill="${GR}"/><circle cx="36" cy="48" r="4" fill="${GR}"/><circle cx="52" cy="40" r="4" fill="${OR}"/>
+   <path d="M-30 -10 L0 -25 L30 -10" fill="none" stroke="#9fb6e8" stroke-width="3"/>
+  </g>`;
+}
+function server(){
+  let g='';
+  for(let i=2;i>=0;i--){const y=i*-46;
+    g+=`<path d="M-55 ${y} L0 ${y+27} L0 ${y+67} L-55 ${y+40} Z" fill="#c7d6f5" stroke="${S}" stroke-width="3"/>
+        <path d="M0 ${y+27} L55 ${y} L55 ${y+40} L0 ${y+67} Z" fill="#9fb6e8" stroke="${S}" stroke-width="3"/>
+        <path d="M-55 ${y} L0 ${y-27} L55 ${y} L0 ${y+27} Z" fill="#fff" stroke="${S}" stroke-width="3"/>
+        <circle cx="-40" cy="${y+26}" r="3.5" fill="${GR}"/><line x1="-30" y1="${y+30}" x2="-12" y2="${y+39}" stroke="${S}" stroke-width="2"/>`;}
+  return `<g transform="translate(0,20)">${g}</g>`;
+}
+function cloud(){
+  return `<g>
+   <path d="M-95 30 Q-125 30 -120 0 Q-115 -30 -80 -25 Q-70 -70 -20 -68 Q25 -95 60 -55 Q105 -60 108 -18 Q135 -10 125 18 Q118 40 90 38 Z" fill="#fff" stroke="${S}" stroke-width="3"/>
+   <circle cx="0" cy="-12" r="34" fill="#e8efff" stroke="${S}" stroke-width="3"/>
+   <ellipse cx="0" cy="-12" rx="14" ry="34" fill="none" stroke="${S}" stroke-width="2.5"/>
+   <line x1="-34" y1="-12" x2="34" y2="-12" stroke="${S}" stroke-width="2.5"/>
+   <path d="M-28 -30 Q0 -22 28 -30 M-28 6 Q0 -2 28 6" fill="none" stroke="${S}" stroke-width="2"/>
+  </g>`;
+}
+const DRAW={laptop,router,server,cloud};
+const LBL={laptop:[-110,95],router:[-80,118],server:[-60,105],cloud:[-55,70]};
+
+/* screen contents of laptop (in screen-local skew space) */
+function scr(content,o){ // draws into screen quad via skew transform
+  return `<g opacity="${o}" transform="matrix(1,-0.5,0,1,-99,0)"><g transform="translate(0,-126)">${content}</g></g>`;
+}
+const SCR_PAGE=`<rect x="0" y="0" width="88" height="126" fill="#fff"/><rect x="0" y="0" width="88" height="16" fill="${BLUE}"/>
+ <rect x="8" y="24" width="60" height="9" fill="${S}"/><rect x="8" y="40" width="72" height="5" fill="#9fb6e8"/><rect x="8" y="50" width="66" height="5" fill="#9fb6e8"/>
+ <rect x="8" y="62" width="72" height="34" fill="#dbe7ff"/><rect x="8" y="104" width="40" height="12" fill="${OR}"/>`;
+const SCR_LOGIN=`<rect x="0" y="0" width="88" height="126" fill="#fff"/><rect x="0" y="0" width="88" height="16" fill="${OR}"/>
+ <rect x="10" y="26" width="68" height="8" fill="${S}"/><rect x="10" y="46" width="68" height="14" fill="#fff" stroke="${S}" stroke-width="1.5"/>
+ <rect x="10" y="66" width="68" height="14" fill="#fff" stroke="${S}" stroke-width="1.5"/><rect x="10" y="90" width="68" height="16" fill="${BLUE}"/>`;
+const SCR_OK=`<rect x="0" y="0" width="88" height="126" fill="#ecfdf3"/><circle cx="44" cy="58" r="26" fill="${GR}"/><path d="M31 58 l9 10 l18 -20" stroke="#fff" stroke-width="6" fill="none"/>`;
+
+/* ---------- geometry ---------- */
+function pathPts(N,ids){return ids.map(i=>[N[i].x,N[i].y-20]);}
+function along(pts,k){
+  const seg=[];let L=0;for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);L+=d;}
+  let r=k*L;for(let i=0;i<seg.length;i++){if(r<=seg[i]||i==seg.length-1){const q=seg[i]?clamp(r/seg[i]):0;return [lerp(pts[i][0],pts[i+1][0],q),lerp(pts[i][1],pts[i+1][1],q)];}r-=seg[i];}
+}
+function camAt(t){
+  const K=[[0,.86,540,420],[2.6,.86,540,420],[3.4,1.32,350,440],[6.7,1.32,350,440],[7.4,1.05,470,380],[11.2,1.05,470,380],[11.9,.95,560,410],[21.4,.95,560,410],
+           [21.5,1.35,380,450],[22.8,1.35,380,450],[23.4,1.0,540,410],[DUR,1.0,540,410]];
+  let i=0;while(i<K.length-2&&t>K[i+1][0])i++;
+  const [t0,s0,x0,y0]=K[i],[t1,s1,x1,y1]=K[i+1];const k=ease(prog(t,t0,t1));
+  return [lerp(s0,s1,k),lerp(x0,x1,k),lerp(y0,y1,k)];
+}
+
+/* ---------- render ---------- */
+function render(t){
+  const sc=sceneAt(t);const set=t<21.5?1:2;const N=set==1?N1:N2;const E=set==1?E1:E2;const T0=set==1?0:21.5;
+  /* caption */
+  const capEl=document.getElementById('capTxt'),tagEl=document.getElementById('capTag');
+  const ck=easeOut(prog(t,sc.a,sc.a+.35));
+  capEl.innerHTML=sc.cap;tagEl.textContent=sc.tag;
+  document.getElementById('cap').style.cssText=`opacity:${ck};transform:translateY(${(1-ck)*30}px)`;
+  /* step panel */
+  const st=sc.n?sc:SC[1];
+  document.getElementById('stN').textContent=sc.id=='hook'?'BEREIT':st.n;
+  document.getElementById('stT').textContent=sc.id=='hook'?'START':st.t;
+  document.getElementById('stD').textContent=sc.id=='hook'?'Wir verfolgen ein einziges Paket – vom Laptop bis zum Webserver und zurück.':st.d;
+  document.getElementById('stKV').innerHTML=(sc.id=='hook'?[['Ziel','beispiel.de']]:st.kv).map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('');
+  document.getElementById('step').style.opacity=.35+.65*ck;
+  /* stage */
+  const [s,cx,cy]=camAt(t);
+  let svg=`<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9fb6e8"/></marker></defs>`;
+  svg+=`<g transform="translate(540,410) scale(${s}) translate(${-cx},${-cy})">`;
+  const appear=(id,i)=>set==1?back(prog(t,.25+i*.35,.25+i*.35+.45)):back(prog(t,21.5+i*.12,21.5+i*.12+.4));
+  const order=Object.keys(N);
+  /* edges */
+  const active=new Set();P.filter(p=>p.set==set&&t>=p.a-.2&&t<=p.b+.2).forEach(p=>{for(let i=1;i<p.path.length;i++){active.add(p.path[i-1]+p.path[i]);active.add(p.path[i]+p.path[i-1]);}});
+  E.forEach(([a,b])=>{
+    const A=N[a],B=N[b];const o=Math.min(appear(a,order.indexOf(a)),appear(b,order.indexOf(b)));
+    let col=active.has(a+b)?BLUE:'#9fb6e8',w=active.has(a+b)?4:3;
+    if(set==2&&a=='router'&&b=='inet'){ if(t<26.9){col=RD;} else {col=GR;w=5;} }
+    svg+=`<line x1="${A.x}" y1="${A.y-20}" x2="${B.x}" y2="${B.y-20}" stroke="${col}" stroke-width="${w}" stroke-dasharray="10 9" stroke-dashoffset="${-t*40}" opacity="${clamp(o)}"/>`;
+  });
+  /* lock on hotel router → internet */
+  if(set==2){const A=N.router,B=N.inet;const mx=(A.x+B.x)/2,my=(A.y+B.y)/2-20;const open=t>=26.9;const pop=back(prog(t,22,22.4));const sh=t>24.2&&t<24.6?Math.sin(t*80)*6:0;
+    svg+=`<g transform="translate(${mx+sh},${my}) scale(${pop})"><circle r="30" fill="${open?GR:RD}"/>
+      <path d="M-10 -2 v-10 a10 10 0 0 1 20 0 ${open?'v-4':'v10'}" transform="${open?'translate(-6,0)':''}" fill="none" stroke="#fff" stroke-width="4"/>
+      <rect x="-14" y="-2" width="28" height="20" rx="3" fill="#fff"/></g>`;}
+  /* nodes */
+  order.forEach((id,i)=>{
+    const n=N[id];const k=clamp(appear(id,i),0,1.2);if(k<=0)return;
+    let screen='';
+    if(n.k=='laptop'){
+      if(set==1&&t>=19.2) screen=scr(SCR_PAGE,clamp((t-19.2)/.4));
+      if(set==2&&t>=26.0&&t<27.9) screen=scr(SCR_LOGIN,clamp((t-26)/.3));
+      if(set==2&&t>=27.9) screen=scr(SCR_OK,clamp((t-27.9)/.2));
+    }
+    const hit=P.find(p=>p.set==set&&p.path[p.path.length-1]==id&&t>=p.b&&t<p.b+.35);const pulse=hit?1+.07*Math.sin(prog(t,hit.b,hit.b+.35)*Math.PI):1;
+    const [lx,ly]=LBL[n.k];
+    svg+=`<g transform="translate(${n.x},${n.y}) scale(${k*pulse})" opacity="${clamp(k)}">${DRAW[n.k](screen)}
+      <text x="${lx}" y="${ly}" font-family="DejaVu Sans Mono" font-weight="bold" font-size="26" fill="${S}">${n.name}</text>
+      ${n.ip?`<text x="${lx}" y="${ly+30}" font-family="DejaVu Sans Mono" font-size="22" fill="#5b6b8c">${n.ip}</text>`:''}</g>`;
+  });
+  /* status badge (captive portal) */
+  if(set==2){
+    const on=t>=27.6;const k=back(prog(t,on?27.6:21.9,on?27.9:22.3));
+    const txt=on?'● ONLINE':'● KEIN INTERNET';const w=on?190:250;
+    svg+=`<g transform="translate(${N.client.x-150},${N.client.y-300}) scale(${k})"><rect width="${w}" height="50" fill="${on?'#dcfce7':'#fef9c3'}" stroke="${on?GR:YE}" stroke-width="3"/>
+      <text x="16" y="33" font-family="DejaVu Sans Mono" font-weight="bold" font-size="22" fill="${on?'#166534':'#713f12'}">${txt}</text></g>`;
+  }
+  /* "done" burst */
+  if(set==1&&t>=19.3&&t<21.5){const k=easeOut(prog(t,19.3,20));
+    svg+=`<g transform="translate(${N1.client.x+40},${N1.client.y-240}) scale(${back(prog(t,19.3,19.7))})"><rect x="-10" y="-34" width="210" height="52" fill="#dcfce7" stroke="${GR}" stroke-width="3"/>
+      <text x="6" y="0" font-family="DejaVu Sans Mono" font-weight="bold" font-size="24" fill="#166534">✓ GELADEN</text></g>`;
+    for(let i=0;i<10;i++){const a=i/10*Math.PI*2;svg+=`<circle cx="${N1.client.x+Math.cos(a)*k*170}" cy="${N1.client.y-80+Math.sin(a)*k*130}" r="${7*(1-k)}" fill="${[BLUE,OR,GR,PU][i%4]}"/>`;}
+  }
+  /* packets */
+  P.filter(p=>p.set==set).forEach(p=>{
+    if(t<p.a||t>p.b+.25)return;
+    const pts=pathPts(N,p.path);let k=ease(prog(t,p.a,p.b));
+    if(p.blocked&&t>p.b){k=1;}
+    const [x,y]=along(pts,k);const fade=t>p.b?1-prog(t,p.b,p.b+.25):clamp((t-p.a)/.15);
+    for(let j=1;j<=5;j++){const [tx,ty]=along(pts,clamp(k-j*.025));svg+=`<circle cx="${tx}" cy="${ty}" r="${9-j*1.3}" fill="${p.c}" opacity="${fade*(.5-j*.08)}"/>`;}
+    const w=Math.max(p.t.length*17+30,p.s.length*13+26);
+    svg+=`<g opacity="${fade}"><circle cx="${x}" cy="${y}" r="10" fill="${p.c}" stroke="#fff" stroke-width="3"/>
+      <g transform="translate(${x-w/2},${y-96})"><rect width="${w}" height="34" fill="${p.c}"/><rect y="34" width="${w}" height="32" fill="#fff" stroke="${p.c}" stroke-width="3"/>
+      <text x="${w/2}" y="25" text-anchor="middle" font-family="DejaVu Sans Mono" font-weight="bold" font-size="22" fill="#fff">${p.t}</text>
+      <text x="${w/2}" y="58" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="18" fill="${S}">${p.s}</text>
+      <path d="M${w/2-9} 66 L${w/2} 78 L${w/2+9} 66" fill="#fff" stroke="${p.c}" stroke-width="3"/></g></g>`;
+    if(p.blocked&&t>p.b-.1){const q=back(prog(t,p.b-.1,p.b+.2));const r=N.router;
+      svg+=`<g transform="translate(${r.x+70},${r.y-120}) scale(${q})"><circle r="26" fill="${RD}"/><path d="M-10 -10 L10 10 M10 -10 L-10 10" stroke="#fff" stroke-width="5"/></g>`;}
+  });
+  svg+=`</g>`;
+  document.getElementById('stage').innerHTML=svg;
+  /* packet log */
+  const seen=P.filter(p=>p.set==set&&t>=p.a);const last=seen.slice(-4);const C={'192.168.1.10':BLUE,'192.168.1.1':OR};
+  document.getElementById('rows').innerHTML=`<div class="row hd"><span>NR.</span><span>ZEIT</span><span>QUELLE</span><span>ZIEL</span><span>PROTO</span><span>INFO</span></div>`+
+    last.map(p=>{const no=seen.indexOf(p)+1;const fr=clamp((t-p.a)/.25);
+      return `<div class="row" style="opacity:${fr};background:${t-p.a<.6?'#eef4ff':'transparent'}"><span><span class="n" style="background:${C[p.log[1]]||PU}">${no}</span></span>${p.log.map(v=>`<span>${v}</span>`).join('')}</div>`}).join('');
+  /* progress / controls */
+  document.getElementById('progF').style.width=(clamp(t/28)*100)+'%';
+  document.getElementById('pp').textContent=t<.6?'▶ START':'❚❚ PAUSE';
+  /* outro */
+  const o=easeOut(prog(t,28,28.45));const out=document.getElementById('out');
+  out.style.opacity=o;out.style.transform=`scale(${lerp(1.08,1,o)})`;
+}
+window.render=render;
+render(new URLSearchParams(location.search).has('t')?+new URLSearchParams(location.search).get('t'):6);
+</script>
+</body>
+</html>
