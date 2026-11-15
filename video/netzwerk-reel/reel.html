@@ -69,6 +69,12 @@
   #out .big{font-weight:900;font-size:128px;line-height:1;letter-spacing:-3px;margin:30px 0 40px;color:#ffe066}
   #out .t2{font-size:46px;font-weight:700;max-width:860px;line-height:1.2}
   #out .pill{margin-top:60px;font-family:var(--mono);font-size:28px;border:3px solid #fff;padding:16px 30px;letter-spacing:3px}
+  /* untertitel */
+  #sub{position:absolute;left:40px;right:40px;bottom:680px;align-items:flex-end;display:flex;justify-content:center;z-index:30;pointer-events:none}
+  #sub span.box{background:rgba(10,22,51,.9);color:#fff;font-weight:800;font-size:56px;line-height:1.15;letter-spacing:-.5px;
+    padding:14px 26px;border-radius:14px;text-align:center;max-width:1000px;box-shadow:0 8px 24px rgba(10,22,51,.25)}
+  #sub span.w{opacity:.95;white-space:nowrap}
+  #sub span.w.on{color:#ffe066}
 </style>
 </head>
 <body>
@@ -87,6 +93,7 @@
 <div id="log"><h4>PAKETFLUSS <em><i style="background:#1d4ed8"></i>Laptop</em><em><i style="background:#7c3aed"></i>Server</em><em><i style="background:#f59e0b"></i>Router</em></h4><div id="rows"></div></div>
 <div id="prog"><div id="progF"></div></div>
 <div id="ctl"><div class="b">1×</div><div class="b">‹</div><div class="b p" id="pp">❚❚ PAUSE</div><div class="b">SCHRITT</div><div class="b">↻</div></div>
+<div id="sub"></div>
 <div id="out">
   <div class="k">NETZWERK EXPLORER</div>
   <div class="big">FOLGE FÜR<br>MEHR</div>
@@ -323,6 +330,36 @@ function render(t){
   /* outro */
   const o=easeOut(prog(t,28,28.45));const out=document.getElementById('out');
   out.style.opacity=o;out.style.transform=`scale(${lerp(1.08,1,o)})`;
+  renderSub(t);
+}
+/* ---------- untertitel (aus voiceover-skript.md) ---------- */
+const SUBS=[
+ [0.2,2.9,'Du klickst. Achtzig Millisekunden. Was passiert da eigentlich?'],
+ [3.1,6.6,'Zuerst schickt dein Laptop die Anfrage an den Router.'],
+ [7.1,11.2,'Aber Computer können keine Namen. DNS macht daraus eine IP-Adresse.'],
+ [11.6,15.2,'Dann Händeschütteln mit dem Server. SYN. SYN-ACK. ACK.'],
+ [15.6,19.2,'Jetzt fordert HTTP die Seite an. Antwort: 200 OK.'],
+ [19.5,21.3,'Fertig. In unter 100 Millisekunden.'],
+ [21.6,23.9,'Und warum will Hotel-WLAN erst ein Login?'],
+ [24.0,26.3,'Weil der Router deine Anfragen abfängt.'],
+ [26.4,27.9,'Login rein – und du bist durch.'],
+ [28.2,30.3,'Folg mir. Teil zwei: VPN.']
+];
+/* in Häppchen (Satz, max. 4 Wörter) zerlegen, Zeit nach Zeichenlänge verteilen */
+const CHUNKS=[];
+SUBS.forEach(([a,b,txt])=>{
+  const parts=[];txt.split(/(?<=[.?!])\s+/).forEach(sen=>{const w=sen.split(' ');for(let i=0;i<w.length;i+=4){let c=w.slice(i,i+4);if(w.length-i-4===1){c=w.slice(i);i++;}parts.push(c);}});
+  const L=parts.reduce((s,c)=>s+c.join(' ').length+4,0);let t=a;
+  parts.forEach(c=>{const d=(b-a)*(c.join(' ').length+4)/L;CHUNKS.push({a:t,b:t+d,w:c});t+=d;});
+});
+window.SUB_CHUNKS=CHUNKS;window.SUBS=SUBS;
+function renderSub(t){
+  const el=document.getElementById('sub');const c=CHUNKS.find(c=>t>=c.a&&t<c.b);
+  if(!c){el.innerHTML='';return;}
+  const L=c.w.reduce((s,w)=>s+w.length+1,0);let acc=c.a;const html=c.w.map(w=>{const d=(c.b-c.a)*(w.length+1)/L;const on=t>=acc&&t<acc+d;acc+=d;return `<span class="w${on?' on':''}">${w}</span>`;}).join(' ');
+  const k=back(prog(t,c.a,c.a+.18));
+  el.style.bottom=(t>=28?380:680)+'px';
+  el.innerHTML=`<span class="box" style="transform:scale(${lerp(.85,1,k)});display:inline-block">${html}</span>`;
 }
 window.render=render;
 render(new URLSearchParams(location.search).has('t')?+new URLSearchParams(location.search).get('t'):6);

@@ -5,6 +5,7 @@ Deutsches 9:16-Reel (1080×1920, 30 fps, 30,5 s): „So funktioniert das Interne
 - `netzwerk-explorer-reel-de.mp4` – fertiges Video mit Soundtrack
 - `reel.html` – die Animation (jede Szene über `render(t)` steuerbar, `reel.html?t=12` zeigt Sekunde 12)
 - `render.cjs` – rendert Frame für Frame mit Playwright und gibt es an ffmpeg weiter
+- `untertitel-de.srt` – Untertitel als Datei (für Plattformen, die SRT annehmen)
 - `audio.py` – erzeugt Beat und Sound-Effekte (lizenzfrei, synthetisch) aus `cues.json`
 
 Neu bauen:

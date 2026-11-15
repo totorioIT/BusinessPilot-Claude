@@ -1,0 +1,39 @@
+1
+00:00:00,200 --> 00:00:02,900
+Du klickst. Achtzig Millisekunden. Was passiert da eigentlich?
+
+2
+00:00:03,100 --> 00:00:06,600
+Zuerst schickt dein Laptop die Anfrage an den Router.
+
+3
+00:00:07,100 --> 00:00:11,200
+Aber Computer können keine Namen. DNS macht daraus eine IP-Adresse.
+
+4
+00:00:11,600 --> 00:00:15,200
+Dann Händeschütteln mit dem Server. SYN. SYN-ACK. ACK.
+
+5
+00:00:15,600 --> 00:00:19,200
+Jetzt fordert HTTP die Seite an. Antwort: 200 OK.
+
+6
+00:00:19,500 --> 00:00:21,300
+Fertig. In unter 100 Millisekunden.
+
+7
+00:00:21,600 --> 00:00:23,900
+Und warum will Hotel-WLAN erst ein Login?
+
+8
+00:00:24,000 --> 00:00:26,300
+Weil der Router deine Anfragen abfängt.
+
+9
+00:00:26,400 --> 00:00:27,900
+Login rein – und du bist durch.
+
+10
+00:00:28,200 --> 00:00:30,300
+Folg mir. Teil zwei: VPN.
